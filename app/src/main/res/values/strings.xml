@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">FinancialSpendingDashboardAnalysis</string>
+    <string name="category">Category</string>
+    <string name="amount">Amount</string>
+    <string name="lineGraphXAxisDescription">Consecutive unit number of transaction</string>
+    <string name="transactionType">Transaction Type</string>
+    <string name="fundAccount">Fund Account</string>
+    <string name="fromAccount">From Account</string>
+    <string name="transactionDate">Transaction Date</string>
+    <string name="paymentType">Payment Date</string>
+    <string name="transactionDetails">Transaction Details</string>
+    <string name="transactionDetailsSubHeader">%s Transaction Details</string>
+    <string name="transactionDetailsDescription">View list of all transactions and details for %1$s in %2$s</string>
+    <string name="lineGraphSubHeader">%s Monthly Instance Spending</string>
+    <string name="lineGraphDescription">Shows all instance spending for %1$s in %2$s. This show the volatility of your spending and the relation of your spending behaviour.</string>
+    <string name="totalSpendingSubHeader">%s Monthly Total Spending</string>
+    <string name="totalSpendingBarGraphSubHeader">Total Spending for %1$s in %2$s</string>
+    <string name="totalSpendingBarGraphDescription">View the total spending for %1$s for the past 6 month. Each bar represents the total summation of all transaction under %1$s.</string>
+    <string name="totalSpendingDescription">View your spending breakdown in a pie chart, organized by category and compare it with data from the previous five months.</string>
+    <string name="spendingFinancialDashboard">Spending Financial Dashboard</string>
+</resources>

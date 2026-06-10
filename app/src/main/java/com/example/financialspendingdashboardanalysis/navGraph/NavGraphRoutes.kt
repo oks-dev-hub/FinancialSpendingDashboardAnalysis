@@ -1,0 +1,9 @@
+package com.example.financialspendingdashboardanalysis.navGraph
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+object DisplayFinancialDashboardRoute
+
+@Serializable
+object ViewFullTransactionDetailsRoute
