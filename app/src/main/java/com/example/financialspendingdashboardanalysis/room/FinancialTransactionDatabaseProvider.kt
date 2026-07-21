@@ -17,12 +17,12 @@ object FinancialTransactionDatabaseProvider {
                 FinancialTransactionsDatabase::class.java,
                 "financial.db"
             )
-                .createFromAsset("financial.db")
-                .fallbackToDestructiveMigration()
-                .build()
-                .also {
-                    INSTANCE = it
-                }
+            .createFromAsset("database/financial.db")
+            .fallbackToDestructiveMigration()
+            .build()
+            .also {
+                INSTANCE = it
+            }
         }
     }
 }

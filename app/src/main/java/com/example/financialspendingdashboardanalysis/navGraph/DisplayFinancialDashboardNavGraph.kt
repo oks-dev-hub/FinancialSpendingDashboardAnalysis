@@ -1,13 +1,14 @@
 package com.example.financialspendingdashboardanalysis.navGraph
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.financialspendingdashboardanalysis.ui.theme.FinancialSpendingDashBoard
 import com.example.financialspendingdashboardanalysis.ui.theme.ViewFullTransactionDetails
-import com.example.financialspendingdashboardanalysis.viewModel.FinancialAnalyticsDashboardViewModel
+import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel
 
 /**
  * Root navigation graph for the Financial Spending Dashboard application.
@@ -83,9 +84,12 @@ fun DisplayFinancialDashboardNavGraph() {
     // Navigation controller responsible for managing the application's
     // navigation back stack.
     val navController = rememberNavController()
+    val activity = LocalView.current
 
     // Shared ViewModel used across all navigation destinations.
-    val financialAnalyticsDashboardViewModel: FinancialAnalyticsDashboardViewModel = viewModel()
+    val financialAnalyticsDashboardViewModel: FinancialAnalyticsDashboardViewModel = viewModel(
+        factory = FinancialAnalyticsDashboardViewModel.Factory
+    )
 
     NavHost(
         navController = navController,

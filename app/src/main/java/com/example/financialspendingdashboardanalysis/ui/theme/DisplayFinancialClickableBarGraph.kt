@@ -201,7 +201,7 @@ fun DisplayFinancialClickableBarGraph(
                 }
 
                 //This is where we actually draw each month's label
-                drawText(
+                /*drawText(
                     textMeasurer = textMeasurer,
                     text = barGraphMonth,
                     topLeft = Offset(textX, chartHeight + 8.dp.toPx()),
@@ -212,7 +212,7 @@ fun DisplayFinancialClickableBarGraph(
                         fontWeight = if (selectedBarGraphIndex == barGraphInfo.trueIndex) FontWeight.ExtraBold else FontWeight.Normal,
                         fontStyle = FontStyle.Normal
                     )
-                )
+                )*/
             }
 
             //This is where we draw the maximum amount indicator that is used to estimate the relation between the bars.
