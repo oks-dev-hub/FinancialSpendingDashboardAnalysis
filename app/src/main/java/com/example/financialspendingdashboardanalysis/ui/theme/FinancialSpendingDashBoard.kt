@@ -47,7 +47,7 @@ import com.example.financialspendingdashboardanalysis.model.FinancialDashboardAc
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardEvents
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardStates
 import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
-import com.example.financialspendingdashboardanalysis.model.TransactionCategory
+import com.example.financialmodels.TransactionCategory
 import com.example.financialspendingdashboardanalysis.navGraph.ViewFullTransactionDetailsRoute
 import com.example.financialspendingdashboardanalysis.viewModel.FinancialAnalyticsDashboardViewModel
 import com.example.financialspendingdashboardanalysis.viewModel.FinancialAnalyticsDashboardViewModel.Companion.BAR_GRAPH_ON_CLICK_EVENT
@@ -110,7 +110,6 @@ fun FinancialSpendingDashBoard(
             }
         }
     }
-
     //Passing all necessary values collected from the state changes and from the view model
     //Passing data like this help us achieve the stateless part of smart recomposition
     //Not that only values, and object that are stateless are passed
@@ -461,11 +460,10 @@ fun FinancialSpendingDashboardContent(
             barColor = uiState.generateRandomColorsList.getOrNull(uiState.selectedPieAnglePairsIndex) ?: Color.Transparent,
             selectedBarColor = selectedBarColor,
             onAction = { selectedBarGraphIndex ->
-                val stableSelectedBarGraphIndex = selectedBarGraphIndex
                 scope.launch {
                     onClickSelectionEvent.value = PIE_SLICE_ON_CLICK_EVENT
                     yield()
-                    pagerState.animateScrollToPage(stableSelectedBarGraphIndex)
+                    pagerState.animateScrollToPage(selectedBarGraphIndex)
                 }
             }
         )
@@ -499,12 +497,6 @@ fun FinancialSpendingDashboardContent(
                 uiState.selectedMonth
             ),
         )
-        //The same segment smart recomposition principle applies for this segment UI as well
-        //This displays the line graph for all the transaction amount for the selected TransactionCategory for that that selected month.
-        DisplayAllMonthlyLineGraphs(
-            selectedCategoriesInstancesForAMonth = uiState.fetchSelectedCategoriesInstancesForAllMonths,
-            selectedBarColor = selectedBarColor
-        )
 
         Text(
             modifier = Modifier
@@ -536,13 +528,13 @@ fun FinancialSpendingDashboardContent(
             ),
         )
 
-        //This one displays a list of all transaction items, one by one, in order by paymentDate.
+        /*//This one displays a list of all transaction items, one by one, in order by paymentDate.
         //Each item is clickable and displays the full transaction details
         DisplayListOfSelectedMonthTransactionsDetails(
-            selectedCategoriesInstancesForAllMonth = uiState.fetchSelectedCategoriesInstancesForAllMonths.first[uiState.selectedMonth],
+            selectedCategoriesInstancesForAllMonth = uiState.fetchSelectedCxategoriesInstancesForAllMonths.first[uiState.selectedMonth],
             sendEvent = sendEvent,
             onClickSelectionEvent = { onClickSelectionEvent.value = BAR_GRAPH_ON_CLICK_EVENT }
-        )
+        )*/
     }
 }
 

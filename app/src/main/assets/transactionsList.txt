@@ -14,7 +14,7 @@ FOOD;Restaurant;842211;Credit Card;Spur;Card;1767312000192
 SAVING_AND_INVESTMENTS;Investment Deposit;4822881;
 Savings Account;EasyEquities;EFT;1767319200192
 HOUSEHOLD;Furniture;1528211;Credit Card;@Home;Card;1767326400192
-PERSONAL;Gym;782211;Debit Account;Virgin Active;Debit Order;1767333600192
+PERSONAL;Gym;782211;Debit Account;Virgin Active;Debit Order;1767333600192,
 ENTERTAINMENT;Gaming;2133822;Credit Card;Steam;Card;1767340800192
 FOOD;Groceries;1399221;Debit Account;Pick n Pay;Card;1767348000192
 TRANSPORT;Taxi Fare;192211;Debit Account;Bolt;Card;1767355200192
@@ -22,7 +22,7 @@ MEDICAL;Doctor Visit;882211;Cheque Account;Mediclinic;Card;1767362400192
 COMMUNICATIONS;Mobile Contract;612211;Debit Account;MTN;Debit Order;1767369600192
 FOOD;Takeaway;281221;Debit Account;KFC;Card;1767376800192
 EDUCATION;Books;321221;Debit Account;Exclusive Books;Card;1767384000192
-HOUSEHOLD;Appliances;2448211;Cheque Account;Game;Card;1767391200192
+HOUSEHOLD;Appliances;2448211;Cheque Account;Game;Card;1767391200192 Game, Dis-Chem, Seattle Coffee, Mr Price, Udemy,
 FOOD;Coffee;81211;Debit Account;Seattle Coffee;Card;1767398400192
 TRANSPORT;Fuel;1042211;Debit Account;BP;Card;1767405600192
 PERSONAL;Clothing;782211;Credit Card;Mr Price;Card;1767412800192
@@ -326,7 +326,7 @@ MEDICAL;Doctor Visit;832211;Debit Account;Mediclinic;Card;1772865600192
 SAVING_AND_INVESTMENTS;Savings Transfer;3638199;Savings Account;Bank;EFT;1772872800192
 FOOD;Takeaway;342211;Debit Account;McDonalds;Card;1772880000192
 ENTERTAINMENT;Gaming;2239221;Credit Card;Steam;Card;1772887200192
-HOUSEHOLD;Furniture;1428211;Credit Card;Coricraft;Card;1772894400192
+HOUSEHOLD;Furniture;1428211;Credit Card;Coricraft;Card;1772894400192 Coricraft, Steam, Shell
 TRANSPORT;Fuel;1222211;Debit Account;Shell;Card;1772901600192
 FOOD;Restaurant;982211;Credit Card;Spur;Card;1772908800192
 COMMUNICATIONS;Data Bundle;142211;Debit Account;Cell C;Card;1772916000192

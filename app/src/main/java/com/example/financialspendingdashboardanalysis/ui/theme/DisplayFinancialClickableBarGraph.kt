@@ -65,7 +65,7 @@ import kotlin.math.roundToInt
 @Composable
 fun DisplayFinancialClickableBarGraph(
     lastSixMonthsFromCurrentMonth: List<String>,
-    selectedCategoriesForAllMonth: Map<String, PieChartInfo> = emptyMap(),
+    selectedCategoriesForAllMonth: Map<Int, PieChartInfo> = emptyMap(),
     selectedBarGraphIndex: Int = 0,
     barColor: Color = Color.Transparent,
     selectedBarColor: Color = Color.Transparent,
@@ -152,11 +152,11 @@ fun DisplayFinancialClickableBarGraph(
             selectedCategoriesForAllMonth.entries.forEach { (key, entry) ->
                 //determine the bra's height via the ration of the summation of all transaction for this category associated with the selected month by total summation all transaction for that Transaction Category
                 val barHeight = (entry.totalSummationOfAmountValuesInCategory.toFloat() / maxAmountForSelectionCategory.toFloat()) * (chartHeight)
-                val correctIndex = lastSixMonthsFromCurrentMonth.indexOf(key[0].uppercase() + key.substring(1).lowercase())
+                val correctIndex = key
 
                 val barGraphInfo = BarGraphInfo(
                     barHeight = barHeight,
-                    month = key,
+                    month = lastSixMonthsFromCurrentMonth[correctIndex],
                     trueIndex = correctIndex,
                     left = spacing + correctIndex * (barWidth + spacing),
                     top = chartHeight - barHeight,

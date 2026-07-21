@@ -1,5 +1,7 @@
 package com.example.financialspendingdashboardanalysis.model
 
+import com.example.financialmodels.TransactionCategory
+
 sealed interface FinancialDashboardAction {
     data class InitializeMonthlyPieChartDashboard(val pageIndex: Int): FinancialDashboardAction
 

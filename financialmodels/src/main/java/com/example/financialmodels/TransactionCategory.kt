@@ -1,6 +1,6 @@
-package com.example.financialspendingdashboardanalysis.model
+package com.example.financialmodels
 
-enum class TransactionCategory(value: String) {
+enum class TransactionCategory(val value: String) {
     PERSONAL("Personal"),
     FAMILY("Family"),
     MEDICAL("Medical"),
