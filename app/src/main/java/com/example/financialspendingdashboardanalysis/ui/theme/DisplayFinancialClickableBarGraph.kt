@@ -20,8 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.room.TypeConverter
+import com.example.financialmodels.TransactionCategory
 import com.example.financialspendingdashboardanalysis.model.BarGraphInfo
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
+import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 /**
@@ -82,6 +85,7 @@ fun DisplayFinancialClickableBarGraph(
                 .pointerInput(selectedCategoriesForAllMonth.toMap()) {
                     detectTapGestures { tapOffset ->
                         //this is the lowest level of determining a click in a Canvas area
+                        if (selectedCategoriesForAllMonth.isEmpty()) return@detectTapGestures
 
                         val barWidth = size.width / (selectedCategoriesForAllMonth.size * 2f)
 
@@ -115,6 +119,8 @@ fun DisplayFinancialClickableBarGraph(
             val canvasHeight = size.height
             val spacing = 16.dp.toPx()
             val itemCount = selectedCategoriesForAllMonth.size
+            if (itemCount == 0) return@Canvas
+
             val totalSpacing = spacing * (itemCount + 1)
 
             //determines the barWidth for each bar in the bar graph
@@ -151,22 +157,27 @@ fun DisplayFinancialClickableBarGraph(
             //This is so that when we want to display them we can be sure about the order's consistency
             selectedCategoriesForAllMonth.entries.forEach { (key, entry) ->
                 //determine the bra's height via the ration of the summation of all transaction for this category associated with the selected month by total summation all transaction for that Transaction Category
-                val barHeight = (entry.totalSummationOfAmountValuesInCategory.toFloat() / maxAmountForSelectionCategory.toFloat()) * (chartHeight)
-                val correctIndex = key
+                val barHeight =
+                    (entry.totalSummationOfAmountValuesInCategory.toFloat() / maxAmountForSelectionCategory.toFloat()) * (chartHeight)
+                val correctIndex = key - 1
 
-                val barGraphInfo = BarGraphInfo(
-                    barHeight = barHeight,
-                    month = lastSixMonthsFromCurrentMonth[correctIndex],
-                    trueIndex = correctIndex,
-                    left = spacing + correctIndex * (barWidth + spacing),
-                    top = chartHeight - barHeight,
-                    color = if (selectedBarGraphIndex == correctIndex) selectedBarColor else barColor
-                )
-                barGraphInfoList[correctIndex] = barGraphInfo
+                if (correctIndex in 0 until 6) {
+                    val barGraphInfo = BarGraphInfo(
+                        barHeight = barHeight,
+                        month = lastSixMonthsFromCurrentMonth.getOrNull(correctIndex) ?: "",
+                        trueIndex = correctIndex,
+                        left = spacing + (correctIndex) * (barWidth + spacing),
+                        top = chartHeight - barHeight,
+                        color = if (selectedBarGraphIndex == correctIndex) selectedBarColor else barColor
+                    )
+                    barGraphInfoList[correctIndex] = barGraphInfo
+                }
             }
 
             //this is the resultant sorted list, we use to display the bar's orderly so.
             barGraphInfoList.forEachIndexed { _, barGraphInfo ->
+                if (barGraphInfo.month.isEmpty()) return@forEachIndexed
+
                 //will be displaced the bottom associated with its corresponding bar
                 val barGraphMonth = barGraphInfo.month.take(3)
 
@@ -178,7 +189,7 @@ fun DisplayFinancialClickableBarGraph(
 
                 val textWidth = textLayoutResult.size.width.toFloat()
                 //determine the x-coordinate for the Offsetting of mont label text
-                val textX = barGraphInfo.left + ((barWidth - textWidth) / 2f)
+                val textX = barGraphInfo.left + ((barWidth - textWidth).absoluteValue / 2f)
 
                 //This where we draw each bar, placed them using the function Offset
                 //The size, that is width and height is determined by Size
@@ -192,7 +203,7 @@ fun DisplayFinancialClickableBarGraph(
                 //This is to indicated that a bra is selected, here we uniquely mark a bar to signal that it is selected.
                 if (selectedBarGraphIndex == barGraphInfo.trueIndex) {
                     drawRoundRect(
-                        color = Color.Black,
+                        color = Color.Companion.Black,
                         topLeft = Offset(barGraphInfo.left, barGraphInfo.top),
                         size = Size(barWidth, barGraphInfo.barHeight),
                         cornerRadius = CornerRadius(16f, 16f),
@@ -201,10 +212,10 @@ fun DisplayFinancialClickableBarGraph(
                 }
 
                 //This is where we actually draw each month's label
-                /*drawText(
+                drawText(
                     textMeasurer = textMeasurer,
                     text = barGraphMonth,
-                    topLeft = Offset(textX, chartHeight + 8.dp.toPx()),
+                    topLeft = Offset(textX, (chartHeight + 8.dp.toPx()).absoluteValue),
                     style = TextStyle(
                         color = Color.Black,
                         fontSize = 16.sp, // Define font size
@@ -212,7 +223,7 @@ fun DisplayFinancialClickableBarGraph(
                         fontWeight = if (selectedBarGraphIndex == barGraphInfo.trueIndex) FontWeight.ExtraBold else FontWeight.Normal,
                         fontStyle = FontStyle.Normal
                     )
-                )*/
+                )
             }
 
             //This is where we draw the maximum amount indicator that is used to estimate the relation between the bars.

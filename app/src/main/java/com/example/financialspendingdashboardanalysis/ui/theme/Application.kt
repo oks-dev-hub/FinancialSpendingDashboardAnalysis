@@ -1,6 +1,7 @@
 package com.example.financialspendingdashboardanalysis.ui.theme
 
 import android.app.Application
+import android.util.Log
 import com.example.financialspendingdashboardanalysis.FinancialTransactionRepository
 import com.example.financialspendingdashboardanalysis.room.FinancialTransactionDatabaseProvider
 

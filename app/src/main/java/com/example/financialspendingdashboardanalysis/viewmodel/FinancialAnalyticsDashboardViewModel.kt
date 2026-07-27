@@ -1,6 +1,7 @@
 package com.example.financialspendingdashboardanalysis.viewmodel
 
 import android.app.Application
+import android.util.Log
 import com.example.financialspendingdashboardanalysis.FinancialTransactionRepository
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
@@ -15,6 +16,7 @@ import com.example.financialspendingdashboardanalysis.model.FinancialDashboardSt
 import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
 import com.example.financialmodels.TransactionCategory
+import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
 import com.example.financialspendingdashboardanalysis.model.YearlyMonths
 import com.example.financialspendingdashboardanalysis.room.FinancialTransactionDatabaseProvider
 import com.example.financialspendingdashboardanalysis.room.FinancialTransactionsDao
@@ -31,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.collections.set
 import kotlin.random.Random
 
 /**
@@ -41,12 +44,10 @@ class FinancialAnalyticsDashboardViewModel(
     private val application: Application,
     private val financialTransactionRepository: FinancialTransactionRepository
 ) : AndroidViewModel(application) {
-    var financialTransactionData: MutableList<FinancialTransactionData> = mutableListOf()
     val globalPieChartInfoMap: MutableMap<Int, List<PieChartInfo>> = mutableMapOf()
-    var categorizedFinancialTransactionData: MutableMap<TransactionCategory, List<FinancialTransactionData>> = mutableMapOf<TransactionCategory, List<FinancialTransactionData>>()
     var monthlyPieChartData: MutableMap<TransactionCategory, PieChartInfo> = mutableMapOf()
     var monthlyBarGraphData: MutableMap<Int, PieChartInfo> = mutableMapOf()
-    val monthlyLineGraphsData: MutableMap<String, List<FinancialTransactionData>> = mutableMapOf()
+    val monthlyLineGraphsData: Map<Int, FiveDayAverageValues> = emptyMap()
     var currentMonth: String = ""
     var selectedMonth: String = ""
 
@@ -57,9 +58,7 @@ class FinancialAnalyticsDashboardViewModel(
     val generateRandomColors: MutableList<Color> = mutableListOf()
     var selectedFinancialTransactionData: FinancialTransactionData = FinancialTransactionData()
     var fetchedFinancialTransactionsEntity: List<PieChartInfo> = emptyList()
-    private var financialTransactionsDatabase: FinancialTransactionsDatabase =
-        FinancialTransactionDatabaseProvider.get(application.applicationContext)
-    private var financialTransactionsDao: FinancialTransactionsDao = financialTransactionsDatabase.financialTransactionsDao()
+    var fetchedAverageMonthlySummation: List<FiveDayAverageValues> = emptyList()
 
     private val _uiState = MutableStateFlow(FinancialDashboardStates())
     val uiState = _uiState.asStateFlow()
@@ -72,12 +71,14 @@ class FinancialAnalyticsDashboardViewModel(
             "MMMM",
             Locale.getDefault()
         ).format(Calendar.getInstance().time).trim()
+
         lastSixMonthsFromCurrentMonth = getPreviousValues(count = 6).reversed()
     }
 
     companion object {
         const val BAR_GRAPH_ON_CLICK_EVENT: String = "BarGraphOnClickEvent"
         const val PIE_SLICE_ON_CLICK_EVENT: String = "PieSliceOnClickEvent"
+
 
         /**
          * Factory for creating [FinancialAnalyticsDashboardViewModel] instances.
@@ -110,29 +111,40 @@ class FinancialAnalyticsDashboardViewModel(
                 if (action.pageIndex == -1) return
 
                 selectedMonth = lastSixMonthsFromCurrentMonth[action.pageIndex]
-                getMonthlyPieData(action.pageIndex)
-                var transactionCategory: TransactionCategory = TransactionCategory.UNKNOWN
+                getMonthlyPieData(action.pageIndex) { monthlyPieChartDataObject ->
+                    var transactionCategory: TransactionCategory = TransactionCategory.UNKNOWN
 
-                monthlyPieChartData.entries.forEachIndexed { index, (transactionData, _) ->
-                    if (index == 0) {
-                        transactionCategory = transactionData
-                        return@forEachIndexed
+                    monthlyPieChartDataObject.entries.forEachIndexed { index, (transactionData, _) ->
+                        if (index == 0) {
+                            transactionCategory = transactionData
+                            return@forEachIndexed
+                        }
                     }
-                }
 
-                _uiState.update { currentState ->
-                    globalSelectedCategory = transactionCategory
-                    currentState.copy(
-                        generateRandomColorsList = generateRandomColorsList(monthlyPieChartData.size),
-                        selectedPieAnglePairsIndex = 0,
-                        monthlyPieData = monthlyPieChartData,
-                        selectedCategory = transactionCategory,
-                        selectedMonth = selectedMonth,
-                        hasDashBoardBeenInitializedBefore = true,
-                        selectedBarGraphIndex = lastSixMonthsFromCurrentMonth.indexOf(selectedMonth),
-                        selectedBarGraphMonth = lastSixMonthsFromCurrentMonth[action.pageIndex],
-                        maxAmountForSelectedCategory = getMaxAmountForSelectedCategory(transactionCategory, action.pageIndex),
-                        fetchSelectedCategoriesForAllMonth = fetchSelectedCategoriesForAllMonth(transactionCategory) ,
+                    _uiState.update { currentState ->
+                        globalSelectedCategory = transactionCategory
+                        currentState.copy(
+                            generateRandomColorsList = generateRandomColorsList(monthlyPieChartData.size),
+                            selectedPieAnglePairsIndex = 0,
+                            monthlyPieData = monthlyPieChartDataObject,
+                            selectedCategory = transactionCategory,
+                            selectedMonth = selectedMonth,
+                            hasDashBoardBeenInitializedBefore = true,
+                            selectedBarGraphIndex = action.pageIndex,
+                            selectedBarGraphMonth = lastSixMonthsFromCurrentMonth[action.pageIndex],
+                            maxAmountForSelectedCategory = getMaxAmountForSelectedCategory(
+                                transactionCategory,
+                                action.pageIndex
+                            ),
+                            fetchSelectedCategoriesForAllMonth = fetchSelectedCategoriesForAllMonth(
+                                transactionCategory
+                            )
+                        )
+                    }
+
+                    populateFiveDayAMountAverageMonthly(
+                        month = action.pageIndex,
+                        selectedTransactionCategory = transactionCategory
                     )
                 }
             }
@@ -154,20 +166,31 @@ class FinancialAnalyticsDashboardViewModel(
                         ),
                     )
                 }
+
+                populateFiveDayAMountAverageMonthly(
+                    month = lastSixMonthsFromCurrentMonth.indexOf(selectedMonth),
+                    selectedTransactionCategory = globalSelectedCategory
+                )
             }
 
             is FinancialDashboardAction.SetBarChartClickAction -> {
                 selectedMonth = lastSixMonthsFromCurrentMonth[action.selectedBarGraphIndex]
-                getMonthlyPieData(action.selectedBarGraphIndex)
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        generateRandomColorsList = generateRandomColorsList(monthlyPieChartData.size),
-                        monthlyPieData = monthlyPieChartData,
-                        selectedMonth = selectedMonth,
-                        selectedCategory = globalSelectedCategory,
-                        selectedPieAnglePairsIndex = currentState.selectedPieAnglePairsIndex,
-                        selectedBarGraphIndex = action.selectedBarGraphIndex,
-                        selectedBarGraphMonth = lastSixMonthsFromCurrentMonth[(lastSixMonthsFromCurrentMonth.size - 1) - action.selectedBarGraphIndex],
+                getMonthlyPieData(action.selectedBarGraphIndex) { monthlyPieChartDataObject ->
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            generateRandomColorsList = generateRandomColorsList(monthlyPieChartData.size),
+                            monthlyPieData = monthlyPieChartDataObject,
+                            selectedMonth = selectedMonth,
+                            selectedCategory = globalSelectedCategory,
+                            selectedPieAnglePairsIndex = currentState.selectedPieAnglePairsIndex,
+                            selectedBarGraphIndex = action.selectedBarGraphIndex,
+                            selectedBarGraphMonth = lastSixMonthsFromCurrentMonth[(lastSixMonthsFromCurrentMonth.size - 1) - action.selectedBarGraphIndex],
+                        )
+                    }
+
+                    populateFiveDayAMountAverageMonthly(
+                        month = action.selectedBarGraphIndex,
+                        selectedTransactionCategory = globalSelectedCategory
                     )
                 }
             }
@@ -181,7 +204,8 @@ class FinancialAnalyticsDashboardViewModel(
         var maxAmount = 0L
 
         globalPieChartInfoMap[enquiryMonth]?.forEach { (monthlyFinancialData, financialTransactionData) ->
-            if (monthlyFinancialData == selectedTransactionCategory) {
+            val convertValueToTransactionCategory = convertValueToTransactionCategory(monthlyFinancialData)
+            if (convertValueToTransactionCategory == selectedTransactionCategory) {
                 if (financialTransactionData > maxAmount) {
                     maxAmount = financialTransactionData
                 }
@@ -191,9 +215,12 @@ class FinancialAnalyticsDashboardViewModel(
         return maxAmount
     }
 
+    fun convertValueToTransactionCategory(transactionCategory: String): TransactionCategory {
+        return TransactionCategory.entries.find { it.value == transactionCategory } ?: TransactionCategory.UNKNOWN
+    }
+
     private fun fetchSelectedCategoriesForAllMonth(transactionCategory: TransactionCategory): Map<Int, PieChartInfo> {
-        viewModelScope.launch {
-            monthlyBarGraphData.clear()
+        viewModelScope.launch(Dispatchers.IO) {
             val monthlyTotalsForCategory = financialTransactionRepository.getMonthlyTotalsForCategory(
                 transactionCategory = transactionCategory.value,
                 transactionsYear = 2026,
@@ -204,7 +231,7 @@ class FinancialAnalyticsDashboardViewModel(
             monthlyTotalsForCategory.forEach { monthlyTotalsForCategory ->
                 monthlyBarGraphData[monthlyTotalsForCategory.month] =
                     PieChartInfo(
-                        selectedTransactionCategory = transactionCategory,
+                        selectedTransactionCategory = transactionCategory.value,
                         totalSummationOfAmountValuesInCategory = monthlyTotalsForCategory.total,
                     )
             }
@@ -226,34 +253,39 @@ class FinancialAnalyticsDashboardViewModel(
     }
 
     private fun getMonthlyPieData(
-        enquiredMonth: Int = 0
+        enquiredMonth: Int = 0,
+        onUpdateRecomposition: (MutableMap<TransactionCategory, PieChartInfo>) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (globalPieChartInfoMap[enquiredMonth] == null) {
-                fetchedFinancialTransactionsEntity =
-                    financialTransactionRepository.getFinancialTransactionsInformationByDate(
-                        enquiredMonth
-                    )
-
-                populateMonthlyDataForEachFinancialCategory(
-                    month = enquiredMonth,
-                    pieChartInfo = fetchedFinancialTransactionsEntity
+            fetchedFinancialTransactionsEntity =
+                financialTransactionRepository.getFinancialTransactionsInformationByDate(
+                    enquiryMonth = enquiredMonth,
                 )
-            }
 
-            globalPieChartInfoMap[enquiredMonth]?.forEach { globalPieChartInfo ->
-                 monthlyPieChartData[globalPieChartInfo.selectedTransactionCategory] =
-                    PieChartInfo(
-                        selectedTransactionCategory = globalPieChartInfo.selectedTransactionCategory,
-                        totalSummationOfAmountValuesInCategory = globalPieChartInfo.totalSummationOfAmountValuesInCategory,
-                    )
+            populateMonthlyDataForEachFinancialCategory(
+                month = enquiredMonth,
+                pieChartInfo = fetchedFinancialTransactionsEntity
+            )
+
+            fetchedFinancialTransactionsEntity.forEach { globalPieChartInfo ->
+                val convertValueToTransactionCategory = convertValueToTransactionCategory(globalPieChartInfo.selectedTransactionCategory)
+
+                if (convertValueToTransactionCategory != TransactionCategory.UNKNOWN) {
+                    monthlyPieChartData[convertValueToTransactionCategory] =
+                        PieChartInfo(
+                            selectedTransactionCategory = globalPieChartInfo.selectedTransactionCategory,
+                            totalSummationOfAmountValuesInCategory = globalPieChartInfo.totalSummationOfAmountValuesInCategory,
+                        )
+                }
             }
 
             monthlyPieChartData = monthlyPieChartData.entries
                 .sortedByDescending  { it.value.totalSummationOfAmountValuesInCategory }
                 .associate { it.key to it.value }
                 .toMutableMap()
-            }
+
+            onUpdateRecomposition(monthlyPieChartData)
+        }
     }
 
     fun getPreviousValues(count: Int): List<String> {
@@ -272,6 +304,26 @@ class FinancialAnalyticsDashboardViewModel(
         pieChartInfo: List<PieChartInfo>
     ) {
         globalPieChartInfoMap[month] = pieChartInfo
+    }
+
+    fun populateFiveDayAMountAverageMonthly(
+        month: Int,
+        selectedTransactionCategory: TransactionCategory
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            fetchedAverageMonthlySummation = financialTransactionRepository.getAverageAmountPerFiveDayInterval(
+                year = 2026,
+                month = month + 1,
+                transactionCategory = selectedTransactionCategory.value
+            )
+
+            Log.i("Okuhle", "did we get to this state $month ${selectedTransactionCategory.value} $fetchedAverageMonthlySummation")
+            _uiState.update { currentState ->
+                currentState.copy(
+                    monthlyLineGraphData = fetchedAverageMonthlySummation
+                )
+            }
+        }
     }
 
     fun formatTimestamp(timestamp: Long): String {

@@ -1,17 +1,19 @@
 package com.example.financialspendingdashboardanalysis.ui.theme
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,12 +21,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
@@ -48,6 +55,7 @@ import com.example.financialspendingdashboardanalysis.model.FinancialDashboardEv
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardStates
 import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
 import com.example.financialmodels.TransactionCategory
+import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
 import com.example.financialspendingdashboardanalysis.navGraph.ViewFullTransactionDetailsRoute
 import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel
 import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel.Companion.BAR_GRAPH_ON_CLICK_EVENT
@@ -55,6 +63,8 @@ import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyti
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
+import kotlin.String
+import kotlin.collections.Map
 
 /**
  * Main entry composable for the Financial Spending Dashboard screen.
@@ -279,36 +289,28 @@ fun FinancialSpendingDashboardContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         //Create the DashBoard's Header Item, to signal which screen we are on.
         TransactionHeaderItem(
             headerItem = stringResource(R.string.spendingFinancialDashboard)
         )
 
-        //This is the PieChart SubHeader
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(16.dp)
-                .align(Alignment.CenterHorizontally),
-            text = stringResource(R.string.totalSpendingSubHeader, lastSixMonthsFromCurrentMonth.getOrNull(pagerState.currentPage) ?: ""),
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
+        AddHorizontalPagerEffect(
+            pagerState = pagerState,
+            onClickSelectionEvent = onClickSelectionEvent,
+            selectedMonth = uiState.selectedMonth
         )
 
-        //PieChart brief description
-        Text(
-            modifier = Modifier
-                .padding(horizontal = 16.dp),
-            text = stringResource(R.string.totalSpendingDescription),
-
+        PagerIndicator(
+            pageCount = pageCount,
+            currentPage = pagerState.currentPage
         )
 
-        Spacer(Modifier.height(16.dp))
+        TitleAndDescriptionContainer(
+            title = stringResource(R.string.totalSpendingSubHeader, lastSixMonthsFromCurrentMonth.getOrNull(pagerState.currentPage) ?: ""),
+            description = stringResource(R.string.totalSpendingDescription)
+        )
 
         Box(
             modifier = Modifier
@@ -348,105 +350,20 @@ fun FinancialSpendingDashboardContent(
             //This is to add navigation icons for paging the Horizontal PieChart Pager
             //The user has the option to drag slide the view or to press on these two below icons.
             //This once only get visible if the current page index is not zero, this is the icons to page backwards, and is displayed on the left hand side.
-            if (pagerState.currentPage > 0) {
-                IconButton(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .align(Alignment.CenterStart)
-                        .size(40.dp)
-                        .border(
-                            width = 1.dp,
-                            color = Color.LightGray.copy(alpha = 0.3f),
-                            shape = CircleShape
-                        )
-                        .background(
-                            color = Color.LightGray.copy(alpha = 0.08f),
-                            shape = CircleShape
-                        ),
-                    onClick = {
-                        /**
-                         * Navigates to previous month in pager.
-                         *
-                         * yield() ensures coroutine cooperatively suspends
-                         * before animation starts (prevents UI jank).
-                         */
-                        scope.launch {
-                            onClickSelectionEvent.value = BAR_GRAPH_ON_CLICK_EVENT
-                            //this function waits for the state change to complete before it continue execution
-                            yield()
-                            pagerState.animateScrollToPage(pagerState.currentPage - 1)
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ChevronLeft,
-                        contentDescription = null
-                    )
-                }
-            }
+
 
             //This once gets displayed only if the page is less than 5, this is for paging up
-            if (pagerState.currentPage < 5) {
-                IconButton(
-                    modifier = Modifier
-                        .padding(end = 10.dp)
-                        .align(Alignment.CenterEnd)
-                        .border(
-                            width = 1.dp,
-                            color = Color.LightGray.copy(alpha = 0.3f),
-                            shape = CircleShape
-                        )
-                        .background(
-                            color = Color.LightGray.copy(alpha = 0.08f),
-                            shape = CircleShape
-                        ),
-                    onClick = {
-                        /**
-                         * Navigates to next month in pager.
-                         */
-                        scope.launch {
-                            onClickSelectionEvent.value = BAR_GRAPH_ON_CLICK_EVENT
-                            //this function waits for the state change to complete before it continue execution
-                            yield()
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null
-                    )
-                }
-            }
         }
 
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(16.dp)
-                .align(Alignment.CenterHorizontally),
-            text = stringResource(
+        TitleAndDescriptionContainer(
+            title = stringResource(
                 R.string.totalSpendingBarGraphSubHeader,
                 uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
                 uiState.selectedMonth),
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        )
-
-        Text(
-            modifier = Modifier
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 25.dp
-                ),
-            text = stringResource(
+            description = stringResource(
                 R.string.totalSpendingBarGraphDescription,
                 uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " ")
-            ),
+            )
         )
 
         //This is the segment of the UI for drawing the Bar Graph
@@ -457,7 +374,8 @@ fun FinancialSpendingDashboardContent(
             lastSixMonthsFromCurrentMonth = lastSixMonthsFromCurrentMonth,
             selectedCategoriesForAllMonth = uiState.fetchSelectedCategoriesForAllMonth,
             selectedBarGraphIndex = uiState.selectedBarGraphIndex,
-            barColor = uiState.generateRandomColorsList.getOrNull(uiState.selectedPieAnglePairsIndex) ?: Color.Transparent,
+            barColor = uiState.generateRandomColorsList.getOrNull(uiState.selectedPieAnglePairsIndex)
+                ?: Color.Transparent,
             selectedBarColor = selectedBarColor,
             onAction = { selectedBarGraphIndex ->
                 scope.launch {
@@ -468,119 +386,159 @@ fun FinancialSpendingDashboardContent(
             }
         )
 
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(start = 16.dp, top = 25.dp, bottom = 16.dp, end = 16.dp)
-                .align(Alignment.CenterHorizontally),
-            text = stringResource(
+        TitleAndDescriptionContainer(
+            title = stringResource(
                 R.string.lineGraphSubHeader,
                 uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
-                ),
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        )
-
-        Text(
-            modifier = Modifier
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 25.dp
-                ),
-            text = stringResource(
+            ),
+            description = stringResource(
                 R.string.lineGraphDescription,
                 uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
                 uiState.selectedMonth
-            ),
-        )
-
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(start = 16.dp, top = 25.dp, bottom = 16.dp, end = 16.dp)
-                .align(Alignment.CenterHorizontally),
-            text = stringResource(
-                R.string.transactionDetailsSubHeader,
-                uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
-            ),
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
             )
         )
 
-        Text(
-            modifier = Modifier
-                .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 25.dp
-                ),
-            text = stringResource(
-                R.string.transactionDetailsDescription,
-                uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
-                uiState.selectedMonth
-            ),
+        DisplayAllMonthlyLineGraphs(
+            monthlyLineGraphData = uiState.monthlyLineGraphData,
+            selectedBarColor = selectedBarColor
         )
-
-        /*//This one displays a list of all transaction items, one by one, in order by paymentDate.
-        //Each item is clickable and displays the full transaction details
-        DisplayListOfSelectedMonthTransactionsDetails(
-            selectedCategoriesInstancesForAllMonth = uiState.fetchSelectedCxategoriesInstancesForAllMonths.first[uiState.selectedMonth],
-            sendEvent = sendEvent,
-            onClickSelectionEvent = { onClickSelectionEvent.value = BAR_GRAPH_ON_CLICK_EVENT }
-        )*/
     }
 }
 
-/**
- * Displays list of transactions for selected month.
- *
- * Sorts transactions chronologically and renders each item.
- *
- * ---
- *
- * ## Complexity
- * - Time: O(N log N) due to sorting
- * - Space: O(1) additional (in-place iteration)
- */
 @Composable
-private fun DisplayListOfSelectedMonthTransactionsDetails(
-   selectedCategoriesInstancesForAllMonth: List<FinancialTransactionData>?,
-   sendEvent: (FinancialTransactionData) -> Unit,
-   onClickSelectionEvent: () -> Unit
+private fun TitleAndDescriptionContainer(
+    title: String,
+    description: String
 ) {
-    if (selectedCategoriesInstancesForAllMonth == null) return
+    Text(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .padding(horizontal = 16.dp),
+        text = title,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleMedium
+    )
 
-    selectedCategoriesInstancesForAllMonth.sortedBy { it.paymentDate.split(" ").first() }
+    Text(
+        modifier = Modifier
+            .padding(horizontal = 16.dp),
+        text = description,
+        style = MaterialTheme.typography.bodyLarge
+    )
+}
 
-    //This iterated to display all transaction formatted in a list item, where you can view the Transaction full Details
-    //This list compromises all transactions of the TransactionCategory for a specific month
-    selectedCategoriesInstancesForAllMonth.forEachIndexed { index, selectedCategoryInstance ->
-        TransactionDetailsListItem(
-            isStartIndex = index == 0,
-            isLastIndex = index == selectedCategoriesInstancesForAllMonth.size - 1,
-            transactionReceiptMeaning = selectedCategoryInstance.fundAccount,
-            transactionDateTimeStamp = selectedCategoryInstance.paymentDate,
-            amount = convertValueToAMount(selectedCategoryInstance.amount),
-            transactionOnClick = {
-                onClickSelectionEvent()
-                sendEvent(selectedCategoryInstance)
+@Composable
+private fun AddHorizontalPagerEffect(
+    pagerState: PagerState,
+    onClickSelectionEvent: MutableState<String>,
+    selectedMonth: String
+) {
+    val scope = rememberCoroutineScope()
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        if (pagerState.currentPage > 0) {
+            FilledTonalIconButton(
+                modifier = Modifier
+                    .padding(start = 10.dp)
+                    .align(Alignment.CenterStart)
+                    .size(24.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                ),
+                onClick = {
+                    /**
+                     * Navigates to previous month in pager.
+                     *
+                     * yield() ensures coroutine cooperatively suspends
+                     * before animation starts (prevents UI jank).
+                     */
+                    scope.launch {
+                        onClickSelectionEvent.value = BAR_GRAPH_ON_CLICK_EVENT
+                        //this function waits for the state change to complete before it continue execution
+                        yield()
+                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = null
+                )
             }
+        }
+
+        Text(
+            modifier = Modifier.align(Alignment.Center),
+            text = "$selectedMonth 2026",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
         )
 
-        if (index != selectedCategoriesInstancesForAllMonth.size -1) {
-            //This is to separate neatly the list items
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = Color.LightGray,
-                thickness = 1.dp
-            )
+        //This once gets displayed only if the page is less than 5, this is for paging up
+        if (pagerState.currentPage < 5) {
+            FilledTonalIconButton(
+                modifier = Modifier
+                    .padding(end = 10.dp)
+                    .align(Alignment.CenterEnd)
+                    .size(24.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                ),
+                onClick = {
+                    /**
+                     * Navigates to next month in pager.
+                     */
+                    scope.launch {
+                        onClickSelectionEvent.value = BAR_GRAPH_ON_CLICK_EVENT
+                        //this function waits for the state change to complete before it continue execution
+                        yield()
+                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PagerIndicator(
+    pageCount: Int,
+    currentPage: Int,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+    ) {
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(pageCount) { page ->
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .then(
+                            if (page == currentPage) {
+                                Modifier.background(MaterialTheme.colorScheme.primary)
+                            } else {
+                                Modifier.border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    shape = CircleShape
+                                )
+                            }
+                        )
+                )
+            }
         }
     }
 }

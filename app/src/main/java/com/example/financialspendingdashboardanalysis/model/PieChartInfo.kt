@@ -1,8 +1,10 @@
 package com.example.financialspendingdashboardanalysis.model
 
-import com.example.financialmodels.TransactionCategory
+import androidx.room.ColumnInfo
 
 data class PieChartInfo(
-    val selectedTransactionCategory: TransactionCategory = TransactionCategory.UNKNOWN,
+    @ColumnInfo(name = "selectedTransactionCategory")
+    val selectedTransactionCategory: String = "Unknown",
+    @ColumnInfo(name = "totalSummationOfAmountValuesInCategory")
     val totalSummationOfAmountValuesInCategory: Long = 0
 )

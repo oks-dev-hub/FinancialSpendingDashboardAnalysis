@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.material3)
     implementation(libs.kotlinx.serialization.json)
     implementation("org.xerial:sqlite-jdbc:3.53.2.0")
 

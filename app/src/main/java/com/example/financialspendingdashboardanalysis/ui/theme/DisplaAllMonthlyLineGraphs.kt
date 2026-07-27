@@ -1,5 +1,6 @@
 package com.example.financialspendingdashboardanalysis.ui.theme
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.financialspendingdashboardanalysis.R
 import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
+import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log10
@@ -71,14 +73,19 @@ import kotlin.math.roundToInt
  */
 @Composable
 fun DisplayAllMonthlyLineGraphs(
-    selectedCategoriesInstancesForAMonth: Pair<Map<String, List<FinancialTransactionData>>, Int> = Pair(emptyMap(), 0),
+    monthlyLineGraphData: List<FiveDayAverageValues>,
     selectedBarColor: Color = Color.Transparent
 ) {
-    val maxValue = selectedCategoriesInstancesForAMonth.second
+    if (monthlyLineGraphData.isEmpty()) return
+
+    val maxValue = monthlyLineGraphData.maxOf {
+        it.averageAmount
+    }
+
 
     // Convert max value into human-readable axis label (e.g. 120000 → "120K")
     // Used to gives a rough mathematical measured of the max value displayed on the graph
-    val maxLabel = (maxValue / 100f / 1000f).roundToInt().toString()
+    val maxLabel = (maxValue / 1000f).roundToInt().toString()
     val textMeasurer = rememberTextMeasurer()
     //This is adding horizontal grid on the graph for better UI
     val gridLineCount = 15
@@ -88,7 +95,7 @@ fun DisplayAllMonthlyLineGraphs(
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxWidth()
-                .height(300.dp)
+                .height(250.dp)
                 .background(Color.White)
         ) {
             val width = size.width
@@ -146,50 +153,62 @@ fun DisplayAllMonthlyLineGraphs(
 
             //below reads all the transactions for the selected Transaction Category along with the selected month
             //from then we then map out the path based on the consecutiveness of each transaction
-            selectedCategoriesInstancesForAMonth.first.entries.forEachIndexed { _, (key, _) ->
-                val values = selectedCategoriesInstancesForAMonth.first[key]
-                val lineGraphStroke = Stroke(
-                    width = 3f
-                )
+            val values = monthlyLineGraphData
+            val lineGraphStroke = Stroke(
+                width = 3f
+            )
 
-                if (values != null) {
-                    //X-axis spacing between data points, i.e, spacing between the dots is directly proportional to frequency of values
-                    //Avoid division by zero using coerceAtLeast(1)
-                    val xStep = width / (values.size - 1).coerceAtLeast(1).toFloat()
-                    val path = Path()
+            if (values.isNotEmpty()) {
+                //X-axis spacing between data points, i.e, spacing between the dots is directly proportional to frequency of values
+                //Avoid division by zero using coerceAtLeast(1)
+                val xStep = width / (values.size - 1).coerceAtLeast(1).toFloat()
+                val path = Path()
+                val axisMax = maxValue.toFloat()
 
-                    values.forEachIndexed { pointIndex, data ->
-                        //Normalize value between 0 and 1 based on axis max
-                        //will be used to determine the dot's height on the line graph
-                        val normalized = data.amount.toFloat() / calculateAxisMax(maxValue.toFloat())
-                        //horizontal positioning for the dot, in terms of its index
-                        val horizontalValue = pointIndex * xStep
-                        //determine vertical positioning, using normalized value to remove the upperbound positioning
-                        val verticalValue = height - (normalized * height)
+                values.forEachIndexed { pointIndex, data ->
+                    //Normalize value between 0 and 1 based on axis max
+                    //will be used to determine the dot's height on the line graph
+                    val normalized = (data.averageAmount / axisMax).toFloat()                    //horizontal positioning for the dot, in terms of its index
+                    val horizontalValue = pointIndex * xStep
+                    //determine vertical positioning, using normalized value to remove the upperbound positioning
+                    val verticalValue = height - (normalized * height)
 
-                        //In this "if" block we are gathering all the paths from each dot to another one by one
-                        if (pointIndex == 0) {
-                            path.moveTo(horizontalValue, verticalValue)
-                        } else {
-                            path.lineTo(horizontalValue, verticalValue)
-                        }
-
-                        //This is where we draw each dot on the line graph, each dot represent the amount of each transaction
-                        drawCircle(
-                            color = Color.Gray,
-                            radius = 6f,
-                            center = Offset(horizontalValue, verticalValue)
-                        )
+                    //In this "if" block we are gathering all the paths from each dot to another one by one
+                    if (pointIndex == 0) {
+                        path.moveTo(horizontalValue, verticalValue)
+                    } else {
+                        path.lineTo(horizontalValue, verticalValue)
                     }
 
-                    //this paints the actual path we gathered while we were drawing the transaction dots on the line graphs
-                    //this completed the display of the relation of transaction spent for that selected specific Transaction Category along-side the selected month
-                    drawPath(
-                        path = path,
-                        color = selectedBarColor,
-                        style = lineGraphStroke
+                    //This is where we draw each dot on the line graph, each dot represent the amount of each transaction
+                    drawCircle(
+                        color = Color.Gray,
+                        radius = 6f,
+                        center = Offset(horizontalValue, verticalValue)
                     )
                 }
+
+                //this paints the actual path we gathered while we were drawing the transaction dots on the line graphs
+                //this completed the display of the relation of transaction spent for that selected specific Transaction Category along-side the selected month
+                drawPath(
+                    path = path,
+                    color = Color.Red,
+                    style = lineGraphStroke
+                )
+
+                drawText(
+                    textMeasurer = textMeasurer,
+                    text = "${maxLabel}K",
+                    topLeft = Offset(
+                        4.dp.toPx(),
+                        0.dp.toPx()
+                    ),
+                    style = TextStyle(
+                        color = Color.Black,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
             }
         }
 
@@ -209,28 +228,24 @@ fun DisplayAllMonthlyLineGraphs(
     }
 }
 
-/**
- * Calculates a rounded axis maximum for chart scaling.
- *
- * This ensures that Y-axis values are clean multiples of magnitude
- * (e.g. 1340 → 2000 instead of 1340 for better UI readability).
- *
- * @param value Raw maximum dataset value
- * @return Rounded axis-friendly maximum value
- *
- * ---
- *
- * ### Performance Analysis
- * - Time Complexity: O(1) — only mathematical operations
- * - Space Complexity: O(1) — constant memory usage
- */
 fun calculateAxisMax(value: Float): Float {
     if (value <= 0f) return 1f
 
-    // Determine magnitude (e.g. 10, 100, 1000)
+    // Find the order of magnitude
     val magnitude = 10.0.pow(
         floor(log10(value.toDouble()))
-    ).toFloat()
-    // Round up value to nearest magnitude
-    return ceil(value / magnitude) * magnitude
+    )
+
+    // Normalize the value into a range between 1 and 10
+    val normalized = value / magnitude.toFloat()
+
+    // Choose a clean axis step
+    val niceNormalized = when {
+        normalized <= 1f -> 1f
+        normalized <= 2f -> 2f
+        normalized <= 5f -> 5f
+        else -> 10f
+    }
+
+    return (niceNormalized * magnitude).toFloat()
 }

@@ -1,6 +1,7 @@
 package com.example.financialspendingdashboardanalysis.ui.theme
 
 import android.graphics.Paint
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
 import com.example.financialmodels.TransactionCategory
@@ -121,7 +124,7 @@ fun DisplayFinancialPieChart(
         ) {
             Canvas(
                 modifier = Modifier
-                    .padding(30.dp)
+                    .padding(20.dp)
                     .align(Alignment.Center)
                     .fillMaxWidth()
                     .height(350.dp)
@@ -197,6 +200,10 @@ fun DisplayFinancialPieChart(
                     //Calculated the y-axis value for the same as above ^
                     val verticalTranslation =
                         pieCenter.y + ((diameter / 4.toFloat()) * sin(angleInRadian)).toFloat()
+
+                    if (percentage < 1.toFloat()) {
+                        return@forEachIndexed
+                    }
 
                     scale(
                         scaleX = 1f,
@@ -416,23 +423,39 @@ private fun CreatePieChartDescription(
 ) {
     if (color == null || pieTitle == null) return
 
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.Start,
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(color = color),
+            )
+            //Formatting the value to sentence Capitals
+            val pieTitleFormatted = pieTitle.toCharArray()[0] + pieTitle.substring(1).lowercase()
+            Text(
+                text = if (totalAmount.isNullOrEmpty()) pieTitle else pieTitleFormatted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Text(
             modifier = Modifier
-                .padding(8.dp)
-                .size(16.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(color = color, RoundedCornerShape(4.dp)),
+                .align(Alignment.CenterEnd)
+                .padding(end = 16.dp),
+            textAlign = TextAlign.Start,
+            text = "$totalAmount",
+            style = MaterialTheme.typography.bodyMedium
         )
-        //Formatting the value to sentence Capitals
-        val pieTitleFormatted = pieTitle.toCharArray()[0] + pieTitle.substring(1).lowercase()
-        Text(text = if (totalAmount.isNullOrEmpty()) pieTitle else "$pieTitleFormatted $totalAmount")
     }
 }

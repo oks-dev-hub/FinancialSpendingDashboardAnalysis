@@ -6,10 +6,9 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [FinancialTransactionDataEntity::class],
-    version = 3,
-    exportSchema = false
+    version = 1,
+    exportSchema = true
 )
-@TypeConverters(RoomConverters::class)
 abstract class FinancialTransactionsDatabase : RoomDatabase() {
 
     abstract fun financialTransactionsDao(): FinancialTransactionsDao

@@ -17,5 +17,5 @@
     <string name="totalSpendingBarGraphSubHeader">Total Spending for %1$s in %2$s</string>
     <string name="totalSpendingBarGraphDescription">View the total spending for %1$s for the past 6 month. Each bar represents the total summation of all transaction under %1$s.</string>
     <string name="totalSpendingDescription">View your spending breakdown in a pie chart, organized by category and compare it with data from the previous five months.</string>
-    <string name="spendingFinancialDashboard">Spending Financial Dashboard</string>
+    <string name="spendingFinancialDashboard">Financial Spending Dashboard</string>
 </resources>

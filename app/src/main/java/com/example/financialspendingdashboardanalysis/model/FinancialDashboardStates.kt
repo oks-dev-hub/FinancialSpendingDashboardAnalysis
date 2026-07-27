@@ -16,5 +16,6 @@ data class FinancialDashboardStates(
     val maxAmountForSelectedCategory: Long = 0,
     val selectedCategory: TransactionCategory = TransactionCategory.UNKNOWN,
     val selectedFinancialTransactionData: FinancialTransactionData = FinancialTransactionData(),
-    val fetchSelectedCategoriesForAllMonth: Map<Int, PieChartInfo> = emptyMap()
+    val fetchSelectedCategoriesForAllMonth: Map<Int, PieChartInfo> = emptyMap(),
+    val monthlyLineGraphData:  List<FiveDayAverageValues> = emptyList()
 )

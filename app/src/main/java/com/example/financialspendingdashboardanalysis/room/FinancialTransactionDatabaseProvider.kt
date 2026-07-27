@@ -18,7 +18,6 @@ object FinancialTransactionDatabaseProvider {
                 "financial.db"
             )
             .createFromAsset("database/financial.db")
-            .fallbackToDestructiveMigration()
             .build()
             .also {
                 INSTANCE = it

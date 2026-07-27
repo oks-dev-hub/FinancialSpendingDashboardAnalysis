@@ -84,7 +84,6 @@ fun DisplayFinancialDashboardNavGraph() {
     // Navigation controller responsible for managing the application's
     // navigation back stack.
     val navController = rememberNavController()
-    val activity = LocalView.current
 
     // Shared ViewModel used across all navigation destinations.
     val financialAnalyticsDashboardViewModel: FinancialAnalyticsDashboardViewModel = viewModel(
@@ -101,15 +100,6 @@ fun DisplayFinancialDashboardNavGraph() {
             FinancialSpendingDashBoard(
                 navController = navController,
                 financialAnalyticsDashboardViewModel = financialAnalyticsDashboardViewModel
-            )
-        }
-
-        // Detailed transaction inspection screen.
-        composable<ViewFullTransactionDetailsRoute> {
-            ViewFullTransactionDetails(
-                navController = navController,
-                // Retrieve the transaction selected from the dashboard.
-                financialTransactionData = financialAnalyticsDashboardViewModel.selectedFinancialTransactionData
             )
         }
     }

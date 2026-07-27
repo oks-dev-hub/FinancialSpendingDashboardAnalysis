@@ -131,28 +131,33 @@ val startDate: LocalDate = LocalDate.of(2026, 1, 1)
 val endDate: LocalDate = LocalDate.of(2026, 6, 30)
 val daysRange = ChronoUnit.DAYS.between(startDate, endDate).toInt()
 
-fun randomDate(): LocalDate {
-    return startDate.plusDays(random.nextInt(daysRange).toLong())
-}
+fun randomDate(): LocalDate =
+    startDate.plusDays(random.nextInt(daysRange).toLong())
 
 fun main() {
 
     Class.forName("org.sqlite.JDBC")
-    val dbFolder = File("C:/temp")
+    val dbFolder = File(
+        "C:/Users/User/AndroidStudioProjects/FinancialSpendingDashboardAnalysis/app/src/main/assets/database"
+    )
+
     if (!dbFolder.exists()) {
         dbFolder.mkdirs()
     }
 
     val dbFile = File(dbFolder, "financial.db")
 
-    val conn = DriverManager.getConnection(
-        "jdbc:sqlite:${dbFile.absolutePath}"
-    )
+// Delete old database if you want a fresh generation
+    if (dbFile.exists()) {
+        dbFile.delete()
+    }
+
+    val conn = DriverManager.getConnection("jdbc:sqlite:${dbFile.absolutePath}")
 
     val stmt = conn.createStatement()
 
     // SPEED PRAGMAS
-    stmt.execute("PRAGMA journal_mode = WAL;")
+    stmt.execute("PRAGMA journal_mode = DELETE;")
     stmt.execute("PRAGMA synchronous = OFF;")
     stmt.execute("PRAGMA temp_store = MEMORY;")
     stmt.execute("PRAGMA cache_size = -100000;")
@@ -163,41 +168,19 @@ fun main() {
     stmt.execute(
         """
         CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            year INTEGER,
-            month INTEGER,
-            transaction_category TEXT,
-            merchant TEXT,
-            amount INTEGER,
-            from_account TEXT,
-            fund_account TEXT,
-            payment_type TEXT,
-            payment_date TEXT
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            year INTEGER NOT NULL,
+            month INTEGER NOT NULL,
+            transaction_category TEXT NOT NULL,
+            merchant TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            from_account TEXT NOT NULL,
+            fund_account TEXT NOT NULL,
+            payment_type TEXT NOT NULL,
+            payment_date TEXT NOT NULL
         );
-        """
+        """.trimIndent()
     )
-
-        // Optimized for:
-    // SELECT transaction_category, SUM(amount)
-    // FROM transactions
-    // WHERE month = ?
-    // GROUP BY transaction_category
-    stmt.execute("""
-        CREATE INDEX IF NOT EXISTS idx_month_category_amount
-        ON transactions(month, transaction_category, amount);
-    """.trimIndent())
-
-    // Optimized for:
-    // SELECT year, month, SUM(amount)
-    // FROM transactions
-    // WHERE transaction_category = ?
-    //   AND year = ?
-    //   AND month BETWEEN ? AND ?
-    // GROUP BY year, month
-    stmt.execute("""
-        CREATE INDEX IF NOT EXISTS idx_category_year_month_amount
-        ON transactions(transaction_category, year, month, amount);
-    """.trimIndent())
 
     val sql = """
         INSERT INTO transactions (
@@ -210,7 +193,7 @@ fun main() {
             payment_type,
             payment_date
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """
+    """.trimIndent()
 
     val ps = conn.prepareStatement(sql)
 
@@ -244,9 +227,10 @@ fun main() {
         ps.addBatch()
         batchCount++
 
-        if (batchCount % 5000 == 0) {
+        if (batchCount == 50_000) {
             ps.executeBatch()
             conn.commit()
+            batchCount = 0
             println("Inserted: $i rows")
         }
     }
@@ -255,6 +239,35 @@ fun main() {
     ps.clearBatch()
     conn.commit()
 
+    // Optimized for:
+    // SELECT transaction_category, SUM(amount)
+    // FROM transactions
+    // WHERE month = ?
+    // GROUP BY transaction_category
+    stmt.execute("""
+        CREATE INDEX IF NOT EXISTS
+        index_transactions_month_transaction_category_amount
+        ON transactions(month, transaction_category, amount);
+    """.trimIndent())
+
+    // Optimized for:
+    // SELECT year, month, SUM(amount)
+    // FROM transactions
+    // WHERE transaction_category = ?
+    //   AND year = ?
+    //   AND month BETWEEN ? AND ?
+    // GROUP BY year, month
+    stmt.execute("""
+        CREATE INDEX IF NOT EXISTS
+        index_transactions_transaction_category_year_month_amount
+        ON transactions(transaction_category, year, month, amount);
+    """.trimIndent())
+
+    conn.commit()
+
+    stmt.execute("ANALYZE")
+
     ps.close()
+    stmt.close()
     conn.close()
 }
