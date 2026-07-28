@@ -1,7 +1,6 @@
 package com.example.financialspendingdashboardanalysis.ui.theme
 
 import android.graphics.Paint
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -32,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
@@ -44,44 +44,26 @@ import kotlin.math.sqrt
 
 /**
  * Displays an interactive financial pie chart representing spending distribution per category.
- * NB: This is a clickable pie chart, that shows a monthly total spending distribution in terms of percentages.
- * At the very top of this function is a display of Legend of the Pie Chart associated with the total summation amount of each Transaction Category for that month
- * Each spending transaction is categorized into a TransactionCategory, the Pie Chart displays the total monthly expenditure for all categories the user has spent on for that specific month.
- * The user can track what exactly did they spend on and by how much.
- * Each pie is clickable, a clicked pie is demonstrated by the clicked piece to be slightly our of the pie and border black all around.
- * The mechanics is that when a user taps on an unselected pie, then the bar, get recreated entire now to display contents pertaining to the new clicked TransactionCategory still on the same mont though.
- * So even if the bar graph get recreated with new data input for the total TransactionCategory for the last past six month, the selected bar remain the same, so we still remain in that selected bar but for a new TransactionCategory total summation amounts.
- * Moreover, the line graph will also get recreated to display all transaction point relation for the new TransactionCategory still for the same month, since the mont did not change.
  *
+ * This component visualizes monthly total spending as a percentage breakdown across various
+ * [TransactionCategory] types. It allows users to track their expenditure patterns visually.
  *
- * This composable renders:
- * - Pie chart slices proportional to category totals
- * - Percentage labels inside slices
- * - Click/tap interaction for selecting slices
- * - Highlighted "exploded" selected slice
+ * ### Interaction Model:
+ * - **Tap to Select**: Tapping a slice "explodes" it (moves it slightly outward) and highlights
+ *   it with a black border.
+ * - **State Sync**: Selecting a slice triggers [setSelectedPieItemInChartState], which
+ *   updates the rest of the dashboard (bar graphs and line charts) to show data for that specific category.
  *
- * The chart uses Canvas for custom rendering and manual angle calculations.
+ * ### Visual Elements:
+ * - **Legend**: Displayed at the top via [PieChartLabelIndexDisplayed], showing category names and total amounts.
+ * - **Slices**: Proportional to the category's contribution to total monthly spending.
+ * - **Percentages**: Displayed inside or near slices for quick reference.
  *
- * @param modifier Layout modifier for external positioning
- * @param generateRandomColorsList List of colors mapped to pie slices
- * @param selectedPieAnglePairsIndex Currently selected slice index
- * @param setSelectedPieItemInChartState Callback when a slice is tapped
- * @param monthlyPieData Map of transaction category → aggregated values
- *
- * ---
- *
- * ## Performance Analysis
- *
- * - **Time Complexity: O(N)**
- *   - N = number of categories (slices)
- *   - Each recomposition iterates through all slices once
- *
- * - **Space Complexity: O(N)**
- *   - Stores angle constraints and category name mappings
- *
- * Note:
- * Canvas rendering is GPU-accelerated; main cost comes from recomposition
- * and angle/geometry calculations, not drawing itself.
+ * @param modifier Layout modifier for external positioning.
+ * @param generateRandomColorsList List of colors used to differentiate categories.
+ * @param selectedPieAnglePairsIndex The index of the currently active/exploded slice.
+ * @param setSelectedPieItemInChartState Callback triggered when a user selects a new category slice.
+ * @param monthlyPieData Map containing aggregated financial data for each category.
  */
 @Composable
 fun DisplayFinancialPieChart(
@@ -108,6 +90,7 @@ fun DisplayFinancialPieChart(
     ) {
         //This display the Legend of the Pie Chart each entry associated with the total summation amount of all transaction for that TransactionCategory
         PieChartLabelIndexDisplayed(
+            selectedPieAnglePairsIndex = selectedPieAnglePairsIndex,
             generateRandomColorsList = generateRandomColorsList,
             getMonthlyPieData = monthlyPieData.entries.associate { monthlyPieDataEntry ->
                 //get the overall summation amount for all categories' total summation amount
@@ -300,13 +283,18 @@ fun DisplayFinancialPieChart(
 }
 
 /**
- * Displays legend mapping pie categories to colors and total summation amount of all transaction within the respective TransactionCategories for the associated month of display.
+ * Renders the legend (labels) for the pie chart.
  *
- * Time Complexity: O(N)
- * Space Complexity: O(N)
+ * Lists each transaction category alongside its associated color and the total amount
+ * spent for the selected month.
+ *
+ * @param selectedPieAnglePairsIndex Index of the category to highlight as bold.
+ * @param generateRandomColorsList Colors corresponding to each category index.
+ * @param getMonthlyPieData Map of category names to their total transaction amounts.
  */
 @Composable
 fun PieChartLabelIndexDisplayed(
+    selectedPieAnglePairsIndex: Int = 0,
     generateRandomColorsList: List<Color>,
     getMonthlyPieData: Map<String, Long>
 ) {
@@ -316,17 +304,20 @@ fun PieChartLabelIndexDisplayed(
                 modifier = Modifier,
                 pieTitle = key,
                 color = generateRandomColorsList[index],
-                totalAmount = "R${convertValueToAMount(entry)}"
+                totalAmount = "R${convertValueToAMount(entry)}",
+                isSelectedPieSlice = selectedPieAnglePairsIndex == index
             )
         }
     }
 }
 
 /**
- * Formats raw integer cents into human-readable currency string.
+ * Formats a raw long value (representing cents) into a human-readable currency string.
  *
- * Time Complexity: O(1)
- * Space Complexity: O(1)
+ * Example: 123456 -> "1 234.56"
+ *
+ * @param inputAmount The amount in cents.
+ * @return A formatted string with space as a grouping separator and two decimal places.
  */
 fun convertValueToAMount(inputAmount: Long): String {
     val formatter = java.text.DecimalFormat("#,##0.00").apply {
@@ -364,7 +355,8 @@ private fun CreatePieChartTopHeaderDetails(
     modifier: Modifier,
     pieTitle: String,
     color: Color,
-    totalAmount: String = ""
+    totalAmount: String = "",
+    isSelectedPieSlice: Boolean
 ) {
    Row(modifier = modifier
        .fillMaxWidth()
@@ -374,7 +366,8 @@ private fun CreatePieChartTopHeaderDetails(
            modifier = modifier.fillMaxWidth(1f),
            color = color,
            pieTitle = pieTitle.trim(),
-           totalAmount = totalAmount
+           totalAmount = totalAmount,
+           isSelectedPieSlice = isSelectedPieSlice
        )
    }
 }
@@ -419,7 +412,8 @@ private fun CreatePieChartDescription(
     modifier: Modifier,
     color: Color?,
     pieTitle: String?,
-    totalAmount: String?
+    totalAmount: String?,
+    isSelectedPieSlice: Boolean
 ) {
     if (color == null || pieTitle == null) return
 
@@ -445,7 +439,8 @@ private fun CreatePieChartDescription(
             val pieTitleFormatted = pieTitle.toCharArray()[0] + pieTitle.substring(1).lowercase()
             Text(
                 text = if (totalAmount.isNullOrEmpty()) pieTitle else pieTitleFormatted,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelectedPieSlice) FontWeight.ExtraBold else FontWeight.Normal
             )
         }
 
@@ -455,6 +450,7 @@ private fun CreatePieChartDescription(
                 .padding(end = 16.dp),
             textAlign = TextAlign.Start,
             text = "$totalAmount",
+            fontWeight = if (isSelectedPieSlice) FontWeight.ExtraBold else FontWeight.Normal,
             style = MaterialTheme.typography.bodyMedium
         )
     }

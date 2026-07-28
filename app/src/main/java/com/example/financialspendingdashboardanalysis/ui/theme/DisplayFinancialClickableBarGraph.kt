@@ -136,7 +136,7 @@ fun DisplayFinancialClickableBarGraph(
                 } ?: 1
 
             //determines the highest value on the bra graph, to indicate the estimation of the bra's height in relation to one another.
-            val maxLabel = (maxAmountForSelectionCategory / 100f / 1000f).roundToInt().toString()
+            val maxLabel = (maxAmountForSelectionCategory / 100f / 1000f).roundToInt()
 
             //Control the number of horizontal grid line drawn onf the bar graph
             val gridLineCount = 15
@@ -203,7 +203,7 @@ fun DisplayFinancialClickableBarGraph(
                 //This is to indicated that a bra is selected, here we uniquely mark a bar to signal that it is selected.
                 if (selectedBarGraphIndex == barGraphInfo.trueIndex) {
                     drawRoundRect(
-                        color = Color.Companion.Black,
+                        color = Color.Black,
                         topLeft = Offset(barGraphInfo.left, barGraphInfo.top),
                         size = Size(barWidth, barGraphInfo.barHeight),
                         cornerRadius = CornerRadius(16f, 16f),
@@ -226,19 +226,44 @@ fun DisplayFinancialClickableBarGraph(
                 )
             }
 
+            val xPosition = 4.dp.toPx()
+            val labelStyle = TextStyle(
+                color = Color.Black,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
+
             //This is where we draw the maximum amount indicator that is used to estimate the relation between the bars.
             drawText(
                 textMeasurer = textMeasurer,
                 text = "${maxLabel}K",
                 topLeft = Offset(
-                    4.dp.toPx(),
+                    xPosition,
                     0.dp.toPx()
                 ),
-                style = TextStyle(
-                    color = Color.Black,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                style = labelStyle
+            )
+
+            // Middle amount indicator
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "${maxLabel/2}K",
+                topLeft = Offset(
+                    xPosition,
+                    chartHeight / 2
+                ),
+                style = labelStyle
+            )
+
+            // Zero indicator
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "0K",
+                topLeft = Offset(
+                    xPosition,
+                    chartHeight - 20.dp.toPx()
+                ),
+                style = labelStyle
             )
         }
     }

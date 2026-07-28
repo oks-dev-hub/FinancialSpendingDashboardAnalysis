@@ -1,6 +1,19 @@
+/**
+ * Financial Spending Dashboard Module
+ *
+ * This file contains the primary UI components for the Financial Spending Dashboard.
+ * It utilizes Jetpack Compose with a focus on "Smart Recomposition" to optimize performance.
+ *
+ * The dashboard provides:
+ * - Interactive Pie Charts for category distribution.
+ * - Synchronized Bar Graphs for trend analysis.
+ * - Detailed Line Graphs for historical data visualization.
+ *
+ * Last Updated: October 2025
+ */
+
 package com.example.financialspendingdashboardanalysis.ui.theme
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +42,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -43,20 +54,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.financialspendingdashboardanalysis.R
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardAction
-import com.example.financialspendingdashboardanalysis.model.FinancialDashboardEvents
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardStates
-import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
 import com.example.financialmodels.TransactionCategory
-import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
-import com.example.financialspendingdashboardanalysis.navGraph.ViewFullTransactionDetailsRoute
 import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel
 import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel.Companion.BAR_GRAPH_ON_CLICK_EVENT
 import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel.Companion.PIE_SLICE_ON_CLICK_EVENT
@@ -64,7 +70,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlin.String
-import kotlin.collections.Map
 
 /**
  * Main entry composable for the Financial Spending Dashboard screen.
@@ -110,21 +115,12 @@ fun FinancialSpendingDashBoard(
     //this is where most recomposition are triggered from, here we are listening to state changes and collecting the updated state
     val uiState by financialAnalyticsDashboardViewModel.uiState.collectAsStateWithLifecycle()
 
-    //For one time event navigation
-    //Unit means that this will only execute once
-    LaunchedEffect(Unit) {
-        financialAnalyticsDashboardViewModel.sharedEvents.collect { event ->
-            when (event) {
-                is FinancialDashboardEvents.NavigateToViewTransactionDetails -> navController.navigate(ViewFullTransactionDetailsRoute)
-                else -> {}
-            }
-        }
-    }
     //Passing all necessary values collected from the state changes and from the view model
     //Passing data like this help us achieve the stateless part of smart recomposition
     //Not that only values, and object that are stateless are passed
     FinancialSpendingDashboardContent(
         uiState = uiState,
+        totalTransactionsCount = financialAnalyticsDashboardViewModel.totalTransactionsCount,
         setSelectedPieItemInChartsState = { selectedPieItemInChartIndex, selectedCategory ->
             //This delegated the PieChart Pie Slice click action to the viewModel
             //This is triggered everytime a new Pie Slice is selected
@@ -139,16 +135,6 @@ fun FinancialSpendingDashBoard(
             //The view model check the event, begin work and when done pass output data to UI via recomposition
             //The cycle repeats, this means that we are sending command very cheap on the UI side, and we are sending the output very cheap back to the UI.
             financialAnalyticsDashboardViewModel.onAction(action)
-        },
-        sendEvent = { financialTransactionData ->
-            //This is all the way at the bottom of the Dashboard page, under the line graph, where we display a list of all the transaction for the selected TransactionCategory for that selected month.
-            //Not this is the onItem click function, where it navigates you to the ViewTransaction Details screen
-            financialAnalyticsDashboardViewModel.sendEvent(
-                FinancialDashboardEvents.NavigateToViewTransactionDetails(
-                    financialTransactionData
-                ),
-                financialTransactionData
-            )
         }
     )
 }
@@ -226,10 +212,10 @@ fun FinancialSpendingDashBoard(
 @Composable
 fun FinancialSpendingDashboardContent(
     uiState: FinancialDashboardStates,
+    totalTransactionsCount: Int,
     lastSixMonthsFromCurrentMonth: List<String> = emptyList(),
     setSelectedPieItemInChartsState: (Int, TransactionCategory) -> Unit = { _, _ -> },
-    onAction: (FinancialDashboardAction) -> Unit = {},
-    sendEvent: (FinancialTransactionData) -> Unit = {}
+    onAction: (FinancialDashboardAction) -> Unit = {}
 ) {
 
     //Number of pages in pager (one per month).
@@ -307,9 +293,11 @@ fun FinancialSpendingDashboardContent(
             currentPage = pagerState.currentPage
         )
 
+        val transactionsCount =  "%,d".format(totalTransactionsCount).replace(',', ' ')
+
         TitleAndDescriptionContainer(
             title = stringResource(R.string.totalSpendingSubHeader, lastSixMonthsFromCurrentMonth.getOrNull(pagerState.currentPage) ?: ""),
-            description = stringResource(R.string.totalSpendingDescription)
+            description = stringResource(R.string.totalSpendingDescription, transactionsCount, uiState.selectedMonth)
         )
 
         Box(
@@ -351,9 +339,20 @@ fun FinancialSpendingDashboardContent(
             //The user has the option to drag slide the view or to press on these two below icons.
             //This once only get visible if the current page index is not zero, this is the icons to page backwards, and is displayed on the left hand side.
 
-
             //This once gets displayed only if the page is less than 5, this is for paging up
         }
+
+        val totalCountForSelectedCategory = uiState.monthlyPieData[uiState.selectedCategory]?.totalTransactionsCount ?: 0
+        val countSelectedCategory =  "%,d".format(totalCountForSelectedCategory).replace(',', ' ')
+
+        Text(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            text = stringResource(R.string.selectedCategoryDetail, countSelectedCategory, uiState.selectedCategory.value),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodySmall
+        )
 
         TitleAndDescriptionContainer(
             title = stringResource(
@@ -389,11 +388,10 @@ fun FinancialSpendingDashboardContent(
         TitleAndDescriptionContainer(
             title = stringResource(
                 R.string.lineGraphSubHeader,
-                uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
+                uiState.selectedCategory.value,
             ),
             description = stringResource(
                 R.string.lineGraphDescription,
-                uiState.selectedCategory.name.first() + uiState.selectedCategory.name.substring(1).lowercase().replace("_", " "),
                 uiState.selectedMonth
             )
         )
@@ -405,6 +403,13 @@ fun FinancialSpendingDashboardContent(
     }
 }
 
+/**
+ * A container for displaying a bold title and a description text.
+ * Used consistently across the dashboard to provide context for each visualization.
+ *
+ * @param title The header text to display.
+ * @param description The supporting description text.
+ */
 @Composable
 private fun TitleAndDescriptionContainer(
     title: String,
@@ -424,10 +429,18 @@ private fun TitleAndDescriptionContainer(
         modifier = Modifier
             .padding(horizontal = 16.dp),
         text = description,
-        style = MaterialTheme.typography.bodyLarge
+        style = MaterialTheme.typography.bodyMedium
     )
 }
 
+/**
+ * Adds side-to-side navigation buttons and a month/year indicator for the pager.
+ * This component allows users to navigate through different months of financial data.
+ *
+ * @param pagerState The state of the [PagerState] used by the horizontal pager.
+ * @param onClickSelectionEvent Tracks the source of the navigation to prevent conflicting updates between chart clicks and pager swipes.
+ * @param selectedMonth The name of the month currently being viewed.
+ */
 @Composable
 private fun AddHorizontalPagerEffect(
     pagerState: PagerState,
@@ -506,6 +519,13 @@ private fun AddHorizontalPagerEffect(
     }
 }
 
+/**
+ * A visual indicator for the horizontal pager, showing the current page relative to total pages.
+ * Displays a row of dots where the active page is highlighted with the primary theme color.
+ *
+ * @param pageCount The total number of pages in the pager.
+ * @param currentPage The index of the currently active page.
+ */
 @Composable
 fun PagerIndicator(
     pageCount: Int,

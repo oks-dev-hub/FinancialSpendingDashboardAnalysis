@@ -1,3 +1,22 @@
+/**
+ * Financial Dashboard Data Instantiation Module
+ *
+ * This module is responsible for generating a mock SQLite database for the Financial Spending Dashboard.
+ * It populates a `financial.db` file with one million synthetic transaction records spanning a 
+ * six-month period.
+ *
+ * The generated data includes:
+ * - Transaction categories (Food, Transport, Entertainment, etc.)
+ * - Merchant details with randomized amounts within realistic ranges.
+ * - Payment types (Card, Debit Order, EFT, etc.)
+ * - Randomized dates within the first half of 2026.
+ *
+ * The module also optimizes the database for performance by:
+ * - Using batch insertions and manual transaction commits.
+ * - Configuring SQLite pragmas for speed (Journal Mode DELETE, Synchronous OFF).
+ * - Creating specialized indices to support common dashboard queries.
+ */
+
 package com.example.generatefinancialdashboarddatabase
 
 import com.example.financialmodels.Merchant
@@ -10,6 +29,7 @@ import kotlin.random.asKotlinRandom
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
+//Generate a MILLION randomized transactions
 const val TOTAL_ROWS = 1_000_000
 val random = Random().asKotlinRandom()
 val accountTypes = listOf("Debit Account", "Cheque Account", "Credit Account")
@@ -131,9 +151,25 @@ val startDate: LocalDate = LocalDate.of(2026, 1, 1)
 val endDate: LocalDate = LocalDate.of(2026, 6, 30)
 val daysRange = ChronoUnit.DAYS.between(startDate, endDate).toInt()
 
+/**
+ * Generates a random date between January 1, 2026, and June 30, 2026.
+ *
+ * @return A [LocalDate] within the specified six-month range.
+ */
 fun randomDate(): LocalDate =
     startDate.plusDays(random.nextInt(daysRange).toLong())
 
+/**
+ * Entry point for the database generation process.
+ *
+ * This function performs the following steps:
+ * 1. Sets up the target database folder and file.
+ * 2. Establishes a JDBC connection to SQLite.
+ * 3. Configures performance pragmas and creates the `transactions` table schema.
+ * 4. Iteratively generates and batch-inserts [TOTAL_ROWS] records.
+ * 5. Creates performance-critical indices for month-based and category-based aggregation.
+ * 6. Executes `ANALYZE` to optimize the SQLite query planner.
+ */
 fun main() {
 
     Class.forName("org.sqlite.JDBC")

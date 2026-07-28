@@ -25,72 +25,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 /**
- * Displays a reusable screen header component with an optional
- * back navigation button.
+ * A reusable header component for the financial dashboard and detail screens.
  *
- * This composable is intended to provide a consistent header across
- * application screens while supporting optional backward navigation.
+ * This composable provides a consistent top bar appearance, featuring a centered title
+ * and an optional back navigation button. It uses the theme's primary container color
+ * to establish a clear visual hierarchy.
  *
- * The header consists of:
- * - A centered title
- * - An optional back button aligned to the start of the container
- * - A rounded rectangular background
+ * ### UI Features:
+ * - **Centered Title**: Displays the [headerItem] text using the `titleLarge` typography.
+ * - **Optional Navigation**: If [backButtonOnClick] is provided, an "Arrow Back" icon
+ *   is displayed on the leading edge.
+ * - **Elevation**: Uses a slight tonal elevation (3.dp) to distinguish the header from the content.
  *
- * ---
- *
- * ## UI Layout Structure
- *
- * Box
- * ├── Text (Centered)
- * │   └── Screen title
- * │
- * └── IconButton (Optional)
- *     └── Back Arrow Icon
- *
- * Layout Characteristics:
- * - Fixed height: 72.dp
- * - Full screen width
- * - Rounded corners (16.dp)
- * - Light gray background
- *
- * ## Behavior
- *
- * When [backButtonOnClick] is supplied:
- * - A back arrow icon is displayed.
- * - Pressing the icon invokes the callback.
- *
- * When [backButtonOnClick] is null:
- * - No navigation control is rendered.
- * - The title remains centered.
- *
- * ---
- *
- * ## Performance Analysis
- *
- * Time Complexity: O(1)
- *
- * The composable renders a fixed number of UI elements
- * regardless of input size.
- *
- * Space Complexity: O(1)
- *
- * No dynamic collections or additional memory allocations
- * proportional to input size are required.
- *
- * ---
- *
- * ## Recomposition Notes
- *
- * Recomposition occurs when:
- * - [headerItem] changes
- * - [backButtonOnClick] changes
- *
- * Since the composable contains a small and fixed UI hierarchy,
- * recomposition cost is negligible.
- *
- * @param headerItem Text displayed as the screen title.
- * @param backButtonOnClick Optional callback invoked when the
- * back button is pressed. If null, the back button is hidden.
+ * @param headerItem The title text to be displayed in the center of the header.
+ * @param backButtonOnClick Optional callback for the back button. If null, the button is hidden.
  */
 @Composable
 fun TransactionHeaderItem(

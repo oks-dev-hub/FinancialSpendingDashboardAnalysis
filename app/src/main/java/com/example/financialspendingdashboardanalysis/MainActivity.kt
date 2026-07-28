@@ -19,10 +19,25 @@ import androidx.core.view.WindowCompat
 import com.example.financialspendingdashboardanalysis.navGraph.DisplayFinancialDashboardNavGraph
 import com.example.financialspendingdashboardanalysis.ui.theme.FinancialSpendingDashboardAnalysisTheme
 
+/**
+ * The primary entry point for the Financial Spending Dashboard application.
+ *
+ * This Activity is responsible for setting up the edge-to-edge display and initializing
+ * the Jetpack Compose UI hierarchy. It serves as the host for the application's
+ * navigation graph.
+ *
+ * Features:
+ * - Edge-to-edge system UI integration.
+ * - Theme initialization via [FinancialSpendingDashboardAnalysisTheme].
+ * - Root navigation hosting via [DisplayFinancialDashboardNavGraph].
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Disable automatic window insets to allow custom edge-to-edge handling in Compose
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         setContent {
             FinancialSpendingDashboardAnalysisTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -31,6 +46,7 @@ class MainActivity : ComponentActivity() {
                           .fillMaxSize()
                           .padding(innerPadding)
                     ) {
+                        // Entry point for the application's navigation logic
                         DisplayFinancialDashboardNavGraph()
                     }
                 }

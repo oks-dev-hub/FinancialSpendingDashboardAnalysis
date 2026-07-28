@@ -7,7 +7,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.financialspendingdashboardanalysis.ui.theme.FinancialSpendingDashBoard
-import com.example.financialspendingdashboardanalysis.ui.theme.ViewFullTransactionDetails
 import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyticsDashboardViewModel
 
 /**
@@ -49,19 +48,6 @@ import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyti
  * A single instance of [FinancialAnalyticsDashboardViewModel] is created
  * and shared between all destinations. This ensures:
  *
- * - Consistent dashboard state.
- * - Preserved graph selections.
- * - Access to the currently selected transaction.
- * - Reduced data reloading.
- *
- * UI Layout:
- *
- * ```
- * NavHost
- * ├── FinancialSpendingDashBoard
- * └── ViewFullTransactionDetails
- * ```
- *
  * Navigation Strategy:
  *
  * The dashboard screen acts as the application's start destination.
@@ -72,12 +58,6 @@ import com.example.financialspendingdashboardanalysis.viewmodel.FinancialAnalyti
  *
  * Navigation destinations are composed lazily and only rendered when
  * active within the navigation back stack.
- *
- * Time Complexity: O(1)
- * - Route registration occurs once during composition.
- *
- * Space Complexity: O(1)
- * - Stores a fixed number of navigation destinations.
  */
 @Composable
 fun DisplayFinancialDashboardNavGraph() {

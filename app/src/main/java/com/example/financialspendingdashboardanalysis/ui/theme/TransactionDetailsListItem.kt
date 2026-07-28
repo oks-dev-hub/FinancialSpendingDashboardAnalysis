@@ -28,81 +28,28 @@ import androidx.compose.ui.unit.dp
 
 
 /**
- * Displays a single transaction entry within the transaction details list.
+ * Displays a single transaction entry within a list, providing a summary of the expense.
  *
- * This composable presents a summarized view of a financial transaction,
- * allowing users to quickly inspect transaction information and navigate
- * to a detailed transaction screen.
+ * This component is designed to be used in a vertical list (e.g., in the transaction details
+ * screen). It supports custom rounding of corners via [isStartIndex] and [isLastIndex] to
+ * allow for grouped appearances within a larger list.
  *
- * Each list item displays:
- * - Transaction recipient or merchant name
- * - Transaction date and time
- * - Transaction amount
- * - Navigation indicator
+ * ### UI Features:
+ * - **Merchant/Recipient**: Displays the name or purpose of the transaction.
+ * - **Timestamp**: Shows when the transaction occurred.
+ * - **Amount**: Displays the formatted monetary value.
+ * - **Navigation Icon**: A visual cue indicating that the item is clickable for more details.
  *
- * The entire item is clickable and can trigger navigation or other actions
- * via [transactionOnClick].
+ * ### Interaction:
+ * The entire row is interactive. Tapping anywhere on the item or the specific navigation
+ * icon will trigger the [transactionOnClick] callback.
  *
- * ---
- *
- * ## UI Layout Structure
- *
- * Box
- * ├── Column (Start Aligned)
- * │   ├── Transaction Recipient
- * │   └── Transaction Timestamp
- * │
- * └── Row (End Aligned)
- *     ├── Transaction Amount
- *     └── Navigation Icon
- *
- * ## User Interaction
- *
- * The following interactions invoke [transactionOnClick]:
- *
- * - Tapping anywhere on the list item
- * - Pressing the navigation icon
- *
- * This ensures a consistent and intuitive user experience.
- *
- * ---
- *
- * ## Performance Analysis
- *
- * Time Complexity: O(1)
- *
- * The composable renders a fixed number of UI elements independent
- * of transaction content size.
- *
- * Space Complexity: O(1)
- *
- * No additional collections or dynamically sized structures are created.
- *
- * ---
- *
- * ## Recomposition Notes
- *
- * Recomposition occurs when:
- * - [transactionReceiptMeaning] changes
- * - [transactionDateTimeStamp] changes
- * - [amount] changes
- * - [isStartIndex] changes
- * - [isLastIndex] changes
- *
- * Since the composable contains a small fixed layout hierarchy,
- * recomposition cost remains minimal.
- *
- * @param isStartIndex Indicates whether this item is the first element
- * within a grouped transaction list.
- * @param isLastIndex Indicates whether this item is the final element
- * within a grouped transaction list.
- * @param transactionReceiptMeaning Description of the transaction
- * recipient, merchant, or payment destination.
- * @param transactionDateTimeStamp Date and time associated with the
- * transaction.
- * @param amount Formatted transaction amount displayed to the user.
- * @param transactionOnClick Callback invoked when the user selects
- * the transaction item.
+ * @param isStartIndex True if this is the first item in a group, applying top rounded corners.
+ * @param isLastIndex True if this is the last item in a group, applying bottom rounded corners.
+ * @param transactionReceiptMeaning The name of the merchant or recipient.
+ * @param transactionDateTimeStamp The formatted date and time string.
+ * @param amount The formatted currency string (e.g., "R234.50").
+ * @param transactionOnClick Callback triggered when the item is selected.
  */
 @Composable
 fun TransactionDetailsListItem(

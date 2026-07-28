@@ -1,6 +1,5 @@
 package com.example.financialspendingdashboardanalysis.ui.theme
 
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -24,52 +22,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.financialspendingdashboardanalysis.R
-import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
 import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
-import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
- * Displays a multi-line financial chart representing monthly spending trends per category.
- * Each dot represents a transaction, and the connecting line shows how transactions progress sequentially over time.
- * This graph is particularly for the selected Transaction Category in the Pie Chart, for that Selected or Displayed Month.
- * For example, Food, is one of the Transaction Categories, so the Pie Chart is for example, the month of May, then this line graphs will display all transactions performed for May under Food.
+ * Displays a multi-line financial chart representing monthly spending trends for a selected category.
  *
- * This composable renders:
- * - X/Y axis grid
- * - Multiple category line graphs
- * - Data points per category
- * - Axis label description
+ * This graph visualizes how transaction amounts (averaged over five-day intervals) progress
+ * throughout a specific month. It helps users identify spending patterns or spikes over time.
  *
- * The chart is drawn using a low-level Canvas API for maximum performance and flexibility.
+ * ### Visual Elements:
+ * - **X/Y Axis**: Gray lines representing the chart boundaries.
+ * - **Grid Lines**: Horizontal light gray lines providing a visual scale for the transaction amounts.
+ * - **Data Points**: Gray circles representing the average transaction amount for each interval.
+ * - **Connecting Path**: A continuous line drawn in [selectedBarColor] that connects all data points.
+ * - **Axis Labels**: Y-axis labels indicating the monetary scale (in thousands).
  *
+ * ### Implementation Details:
+ * The chart is rendered using the low-level **Canvas API** for optimal performance and pixel-perfect
+ * control. Values are normalized relative to the maximum value in the dataset to ensure they fit
+ * perfectly within the vertical bounds of the canvas.
  *
- * @param selectedCategoriesInstancesForAMonth
- * This comes already sorted for the Transaction Category that is selected.
- * where the key is associated Month, and values are the list of all transaction performed in that month.
- *
- * A pair containing:
- *  - Map of category name → list of financial transactions
- *  - Maximum transaction value for scaling the Y-axis
- *
- * @param selectedBarColor
- * Color used to draw the line graph paths
- *
- * ---
- *
- * ### Performance Analysis
- *
- * - **Time Complexity: O(C × N)**
- *   - C = number of categories
- *   - N = average number of data points per category
- *
- * - **Space Complexity: O(N) per category**
- *   - Path construction + intermediate drawing objects
- *
- * Note: Canvas rendering is GPU-accelerated; complexity mainly affects recomposition cost.
+ * @param monthlyLineGraphData A list of [FiveDayAverageValues] containing the time-series data to plot.
+ * @param selectedBarColor The color used for the connecting line, typically matching the category's theme color.
  */
 @Composable
 fun DisplayAllMonthlyLineGraphs(
@@ -78,14 +56,11 @@ fun DisplayAllMonthlyLineGraphs(
 ) {
     if (monthlyLineGraphData.isEmpty()) return
 
-    val maxValue = monthlyLineGraphData.maxOf {
-        it.averageAmount
-    }
-
+    val maxValue = monthlyLineGraphData.maxOf { it.averageAmount }
 
     // Convert max value into human-readable axis label (e.g. 120000 → "120K")
     // Used to gives a rough mathematical measured of the max value displayed on the graph
-    val maxLabel = (maxValue / 1000f).roundToInt().toString()
+    val maxLabel = (maxValue / 1000f).roundToInt()
     val textMeasurer = rememberTextMeasurer()
     //This is adding horizontal grid on the graph for better UI
     val gridLineCount = 15
@@ -100,6 +75,12 @@ fun DisplayAllMonthlyLineGraphs(
         ) {
             val width = size.width
             val height = size.height
+            val xPosition = 4.dp.toPx()
+            val labelStyle = TextStyle(
+                color = Color.Black,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
 
             //This line draws the horizontal axis for the line graph
             drawLine(
@@ -141,14 +122,30 @@ fun DisplayAllMonthlyLineGraphs(
                 textMeasurer = textMeasurer,
                 text = "${maxLabel}K",
                 topLeft = Offset(
-                    4.dp.toPx(),
+                    xPosition,
                     0.dp.toPx()
                 ),
-                style = TextStyle(
-                    color = Color.Black,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                style = labelStyle
+            )
+
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "${maxLabel/2}K",
+                topLeft = Offset(
+                    xPosition,
+                    height / 2
+                ),
+                style = labelStyle
+            )
+
+            drawText(
+                textMeasurer = textMeasurer,
+                text = "${0}K",
+                topLeft = Offset(
+                    xPosition,
+                    height
+                ),
+                style = labelStyle
             )
 
             //below reads all the transactions for the selected Transaction Category along with the selected month
@@ -192,22 +189,8 @@ fun DisplayAllMonthlyLineGraphs(
                 //this completed the display of the relation of transaction spent for that selected specific Transaction Category along-side the selected month
                 drawPath(
                     path = path,
-                    color = Color.Red,
+                    color = selectedBarColor,
                     style = lineGraphStroke
-                )
-
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = "${maxLabel}K",
-                    topLeft = Offset(
-                        4.dp.toPx(),
-                        0.dp.toPx()
-                    ),
-                    style = TextStyle(
-                        color = Color.Black,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
                 )
             }
         }
@@ -228,6 +211,16 @@ fun DisplayAllMonthlyLineGraphs(
     }
 }
 
+/**
+ * Calculates a "clean" maximum value for a chart axis based on a raw input value.
+ *
+ * This function uses a "nice numbers" algorithm to find an upper bound that is a multiple
+ * of a power of ten, making the axis labels easier for users to read (e.g., rounding up
+ * a max value of 8,500 to 10,000 or 4,200 to 5,000).
+ *
+ * @param value The raw maximum value found in the dataset.
+ * @return A rounded-up "nice" value suitable for use as an axis maximum.
+ */
 fun calculateAxisMax(value: Float): Float {
     if (value <= 0f) return 1f
 

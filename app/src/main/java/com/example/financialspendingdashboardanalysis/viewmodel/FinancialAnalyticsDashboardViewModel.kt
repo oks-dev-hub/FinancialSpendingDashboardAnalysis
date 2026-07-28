@@ -39,32 +39,98 @@ import kotlin.random.Random
 /**
  * ViewModel responsible for managing all business logic and state
  * associated with the Financial Spending Dashboard.
+ *
+ * This class coordinates data fetching from the [FinancialTransactionRepository],
+ * manages UI state through [FinancialDashboardStates], and processes user actions
+ * via [FinancialDashboardAction].
+ *
+ * It maintains several internal caches for performance:
+ * - [globalPieChartInfoMap]: Monthly breakdowns per category.
+ * - [monthlyPieChartData]: Aggregated data for the currently selected month.
+ * - [monthlyBarGraphData]: Six-month trends for a specific category.
  */
 class FinancialAnalyticsDashboardViewModel(
     private val application: Application,
     private val financialTransactionRepository: FinancialTransactionRepository
 ) : AndroidViewModel(application) {
+    /**
+     * Internal cache mapping month indices to their respective list of [PieChartInfo].
+     */
     val globalPieChartInfoMap: MutableMap<Int, List<PieChartInfo>> = mutableMapOf()
+
+    /**
+     * Aggregated pie chart data for the currently selected month, indexed by category.
+     */
     var monthlyPieChartData: MutableMap<TransactionCategory, PieChartInfo> = mutableMapOf()
+
+    /**
+     * Aggregated bar graph data representing trends for a specific category across months.
+     */
     var monthlyBarGraphData: MutableMap<Int, PieChartInfo> = mutableMapOf()
-    val monthlyLineGraphsData: Map<Int, FiveDayAverageValues> = emptyMap()
+
+    /**
+     * The total number of transactions processed for the current context.
+     */
+    var totalTransactionsCount: Int = 0
+
+    /**
+     * The name of the current calendar month.
+     */
     var currentMonth: String = ""
+
+    /**
+     * The name of the month currently selected in the UI.
+     */
     var selectedMonth: String = ""
 
+    /**
+     * The index of the selected month relative to the data set.
+     */
     var selectedMonthIndex: Int = 0
+
+    /**
+     * The currently selected transaction category across the entire dashboard.
+     */
     var globalSelectedCategory: TransactionCategory = TransactionCategory.UNKNOWN
+
+    /**
+     * A list of all months in a year.
+     */
     val months: List<YearlyMonths> = YearlyMonths.entries
+
+    /**
+     * A list of the last six month names, ending with the current month.
+     */
     var lastSixMonthsFromCurrentMonth: List<String> = emptyList()
+
+    /**
+     * A list of generated colors for chart segments.
+     */
     val generateRandomColors: MutableList<Color> = mutableListOf()
+
+    /**
+     * Data object for the currently selected single transaction.
+     */
     var selectedFinancialTransactionData: FinancialTransactionData = FinancialTransactionData()
+
+    /**
+     * Raw list of pie chart data entities fetched from the repository.
+     */
     var fetchedFinancialTransactionsEntity: List<PieChartInfo> = emptyList()
+
+    /**
+     * List of five-day average values for line graph visualization.
+     */
     var fetchedAverageMonthlySummation: List<FiveDayAverageValues> = emptyList()
 
     private val _uiState = MutableStateFlow(FinancialDashboardStates())
+
+    /**
+     * UI state flow consumed by the Compose layer.
+     */
     val uiState = _uiState.asStateFlow()
 
     private val _sharedEvents = Channel<FinancialDashboardEvents>(Channel.BUFFERED)
-    val sharedEvents = _sharedEvents.receiveAsFlow()
 
     init {
         currentMonth = SimpleDateFormat(
@@ -95,16 +161,11 @@ class FinancialAnalyticsDashboardViewModel(
         }
     }
 
-    fun sendEvent(
-        event: FinancialDashboardEvents,
-        financialTransaction: FinancialTransactionData?
-    ) {
-        selectedFinancialTransactionData = financialTransaction ?: selectedFinancialTransactionData
-        viewModelScope.launch(Dispatchers.IO) {
-            _sharedEvents.send(event)
-        }
-    }
-
+    /**
+     * Processes incoming user or system actions and updates the UI state accordingly.
+     *
+     * @param action The [FinancialDashboardAction] to be performed.
+     */
     fun onAction(action: FinancialDashboardAction) {
         when (action) {
             is FinancialDashboardAction.InitializeMonthlyPieChartDashboard -> {
@@ -197,6 +258,14 @@ class FinancialAnalyticsDashboardViewModel(
         }
     }
 
+    /**
+     * Fetches the maximum transaction amount for a specific category and month.
+     * Used for scaling charts and graphs.
+     *
+     * @param selectedTransactionCategory The category to inspect.
+     * @param enquiryMonth The month index to search in.
+     * @return The highest transaction value (in cents) found.
+     */
     fun getMaxAmountForSelectedCategory(
         selectedTransactionCategory: TransactionCategory,
         enquiryMonth: Int
@@ -215,10 +284,22 @@ class FinancialAnalyticsDashboardViewModel(
         return maxAmount
     }
 
+    /**
+     * Converts a string value to its corresponding [TransactionCategory] enum.
+     *
+     * @param transactionCategory The string representation of the category.
+     * @return The matching [TransactionCategory] or [TransactionCategory.UNKNOWN].
+     */
     fun convertValueToTransactionCategory(transactionCategory: String): TransactionCategory {
         return TransactionCategory.entries.find { it.value == transactionCategory } ?: TransactionCategory.UNKNOWN
     }
 
+    /**
+     * Fetches monthly totals for a specific category over a 6-month period.
+     *
+     * @param transactionCategory The category to fetch data for.
+     * @return A map of month indices to [PieChartInfo] containing totals.
+     */
     private fun fetchSelectedCategoriesForAllMonth(transactionCategory: TransactionCategory): Map<Int, PieChartInfo> {
         viewModelScope.launch(Dispatchers.IO) {
             val monthlyTotalsForCategory = financialTransactionRepository.getMonthlyTotalsForCategory(
@@ -233,12 +314,19 @@ class FinancialAnalyticsDashboardViewModel(
                     PieChartInfo(
                         selectedTransactionCategory = transactionCategory.value,
                         totalSummationOfAmountValuesInCategory = monthlyTotalsForCategory.total,
+                        totalTransactionsCount = monthlyTotalsForCategory.totalTransactionsCount
                     )
             }
         }
         return monthlyBarGraphData
     }
 
+    /**
+     * Generates a list of random colors for chart visualizations.
+     *
+     * @param colorItemsSize The number of colors to generate.
+     * @return A list of [Color] objects.
+     */
     private fun generateRandomColorsList(colorItemsSize: Int): List<Color> {
         generateRandomColors.clear()
         repeat(colorItemsSize) {
@@ -252,6 +340,12 @@ class FinancialAnalyticsDashboardViewModel(
         return generateRandomColors
     }
 
+    /**
+     * Fetches and processes pie chart data for a specific month.
+     *
+     * @param enquiredMonth The index of the month to fetch data for.
+     * @param onUpdateRecomposition Callback triggered when the data is ready for the UI.
+     */
     private fun getMonthlyPieData(
         enquiredMonth: Int = 0,
         onUpdateRecomposition: (MutableMap<TransactionCategory, PieChartInfo>) -> Unit
@@ -268,6 +362,7 @@ class FinancialAnalyticsDashboardViewModel(
             )
 
             fetchedFinancialTransactionsEntity.forEach { globalPieChartInfo ->
+                totalTransactionsCount += globalPieChartInfo.totalTransactionsCount
                 val convertValueToTransactionCategory = convertValueToTransactionCategory(globalPieChartInfo.selectedTransactionCategory)
 
                 if (convertValueToTransactionCategory != TransactionCategory.UNKNOWN) {
@@ -275,6 +370,7 @@ class FinancialAnalyticsDashboardViewModel(
                         PieChartInfo(
                             selectedTransactionCategory = globalPieChartInfo.selectedTransactionCategory,
                             totalSummationOfAmountValuesInCategory = globalPieChartInfo.totalSummationOfAmountValuesInCategory,
+                            totalTransactionsCount = globalPieChartInfo.totalTransactionsCount
                         )
                 }
             }
@@ -288,6 +384,12 @@ class FinancialAnalyticsDashboardViewModel(
         }
     }
 
+    /**
+     * Retrieves the list of month names preceding the current month.
+     *
+     * @param count The number of previous months to retrieve.
+     * @return A list of month names in reverse chronological order.
+     */
     fun getPreviousValues(count: Int): List<String> {
         val currentIndex = YearlyMonths.entries.indexOfFirst {
             it.month.equals(currentMonth, ignoreCase = true)
@@ -299,6 +401,12 @@ class FinancialAnalyticsDashboardViewModel(
         }
     }
 
+    /**
+     * Caches monthly pie chart information in the [globalPieChartInfoMap].
+     *
+     * @param month The month index.
+     * @param pieChartInfo The data to cache.
+     */
     fun populateMonthlyDataForEachFinancialCategory(
         month: Int,
         pieChartInfo: List<PieChartInfo>
@@ -306,6 +414,13 @@ class FinancialAnalyticsDashboardViewModel(
         globalPieChartInfoMap[month] = pieChartInfo
     }
 
+    /**
+     * Fetches average spending values in five-day intervals for line graph display.
+     * Updates the UI state with the results.
+     *
+     * @param month The month index.
+     * @param selectedTransactionCategory The category to analyze.
+     */
     fun populateFiveDayAMountAverageMonthly(
         month: Int,
         selectedTransactionCategory: TransactionCategory
@@ -326,6 +441,12 @@ class FinancialAnalyticsDashboardViewModel(
         }
     }
 
+    /**
+     * Formats a Unix timestamp into a readable date string.
+     *
+     * @param timestamp The timestamp in milliseconds.
+     * @return A formatted string (e.g., "12 October 2025").
+     */
     fun formatTimestamp(timestamp: Long): String {
         return SimpleDateFormat(
             "dd MMMM yyyy",
