@@ -2,7 +2,7 @@
     <string name="app_name">FinancialSpendingDashboardAnalysis</string>
     <string name="category">Category</string>
     <string name="amount">Amount</string>
-    <string name="lineGraphXAxisDescription">Consecutive 5-day interval average spending</string>
+    <string name="lineGraphXAxisDescription">Consecutive daily interval average spending</string>
     <string name="transactionType">Transaction Type</string>
     <string name="fundAccount">Fund Account</string>
     <string name="fromAccount">From Account</string>
@@ -11,8 +11,8 @@
     <string name="transactionDetails">Transaction Details</string>
     <string name="transactionDetailsSubHeader">%s Transaction Details</string>
     <string name="transactionDetailsDescription">View list of all transactions and details for %1$s in %2$s</string>
-    <string name="lineGraphSubHeader">%s Monthly Average Spending</string>
-    <string name="lineGraphDescription">Each dot represent the average spending for a 5-day period for %1$s 2026. This show the volatility of your spending and the relation of your spending behavior.</string>
+    <string name="lineGraphSubHeader">%s Monthly Average Daily Spending</string>
+    <string name="lineGraphDescription">Each dot represent the average spending for per day for %1$s 2026. This show the volatility of your spending and the relation of your spending behavior.</string>
     <string name="totalSpendingSubHeader">%s Monthly Total Spending</string>
     <string name="totalSpendingBarGraphSubHeader">Total Spending for %1$s in %2$s</string>
     <string name="totalSpendingBarGraphDescription">View the total spending for %1$s for the past 6 month. Each bar represents the total summation of all transaction under %1$s.</string>

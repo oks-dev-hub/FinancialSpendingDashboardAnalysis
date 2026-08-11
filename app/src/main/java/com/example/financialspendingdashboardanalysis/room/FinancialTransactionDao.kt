@@ -2,7 +2,7 @@ package com.example.financialspendingdashboardanalysis.room
 
 import androidx.room.Dao
 import androidx.room.Query
-import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
+import com.example.financialspendingdashboardanalysis.model.DayAverageValues
 import com.example.financialspendingdashboardanalysis.model.MonthlyCategoryTotal
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
 
@@ -73,23 +73,23 @@ interface FinancialTransactionsDao {
      * @param year The year to filter by.
      * @param month The month index to filter by.
      * @param transactionCategory The category string (e.g., "Food").
-     * @return A list of [FiveDayAverageValues] representing the spending trend across the month.
+     * @return A list of [DayAverageValues] representing the spending trend across the month.
      */
     @Query("""
         SELECT
-            ((CAST(strftime('%d', payment_date) AS INTEGER) - 1) / 5) AS intervalIndex,
+            CAST(strftime('%d', payment_date) AS INTEGER) AS day,
             AVG(amount) AS averageAmount,
             COUNT(id) AS transactionCount
         FROM transactions
         WHERE year = :year
-          AND month = :month
-          AND transaction_category = :transactionCategory
-        GROUP BY intervalIndex
-        ORDER BY intervalIndex
+        AND month = :month
+        AND transaction_category = :transactionCategory
+        GROUP BY day
+        ORDER BY day
     """)
     suspend fun getAverageAmountPerFiveDayInterval(
         year: Int,
         month: Int,
         transactionCategory: String
-    ): List<FiveDayAverageValues>
+    ): List<DayAverageValues>
 }

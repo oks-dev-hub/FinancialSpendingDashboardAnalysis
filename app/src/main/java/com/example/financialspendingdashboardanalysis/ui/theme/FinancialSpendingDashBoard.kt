@@ -109,7 +109,6 @@ import kotlin.String
  */
 @Composable
 fun FinancialSpendingDashBoard(
-    navController: NavController,
     financialAnalyticsDashboardViewModel: FinancialAnalyticsDashboardViewModel
 ) {
     //this is where most recomposition are triggered from, here we are listening to state changes and collecting the updated state

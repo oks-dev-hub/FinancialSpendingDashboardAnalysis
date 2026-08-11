@@ -1,6 +1,6 @@
 package com.example.financialspendingdashboardanalysis
 
-import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
+import com.example.financialspendingdashboardanalysis.model.DayAverageValues
 import com.example.financialspendingdashboardanalysis.model.MonthlyCategoryTotal
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
 import com.example.financialspendingdashboardanalysis.room.FinancialTransactionsDao
@@ -26,7 +26,7 @@ class FinancialTransactionRepository(
      * @return A list of [PieChartInfo] objects containing category-wise totals.
      */
     suspend fun getFinancialTransactionsInformationByDate(enquiryMonth: Int): List<PieChartInfo> {
-        return financialTransactionsDao.getPieChartInfo(enquiryMonth)
+        return financialTransactionsDao.getPieChartInfo(enquiryMonth + 1)
     }
 
     /**
@@ -60,13 +60,13 @@ class FinancialTransactionRepository(
      * @param year The year of interest.
      * @param month The month of interest.
      * @param transactionCategory The category to analyze.
-     * @return A list of [FiveDayAverageValues] representing smoothed spending data over the month.
+     * @return A list of [DayAverageValues] representing smoothed spending data over the month.
      */
-    suspend fun getAverageAmountPerFiveDayInterval(
+    suspend fun getAverageAmountPerDay(
         year: Int,
         month: Int,
         transactionCategory: String
-    ): List<FiveDayAverageValues> {
+    ): List<DayAverageValues> {
         return financialTransactionsDao.getAverageAmountPerFiveDayInterval(
             year = year,
             month = month,

@@ -19,7 +19,6 @@ import com.example.financialmodels.TransactionCategory
  * @property monthlyPieData Aggregated spending data per category for the selected month.
  * @property selectedBarGraphIndex The index of the selected month in the multi-month bar graph.
  * @property selectedBarGraphMonth The name of the month corresponding to the [selectedBarGraphIndex].
- * @property maxAmountForSelectedCategory The highest transaction value in the selected category/month (used for scaling).
  * @property selectedCategory The currently active transaction category filter.
  * @property selectedFinancialTransactionData Details of a specifically selected transaction.
  * @property fetchSelectedCategoriesForAllMonth Mapping of month indices to category-specific totals for bar graph rendering.
@@ -34,9 +33,8 @@ data class FinancialDashboardStates(
     val monthlyPieData: Map<TransactionCategory, PieChartInfo> = emptyMap(),
     val selectedBarGraphIndex: Int = 0,
     val selectedBarGraphMonth: String = "",
-    val maxAmountForSelectedCategory: Long = 0,
     val selectedCategory: TransactionCategory = TransactionCategory.UNKNOWN,
     val selectedFinancialTransactionData: FinancialTransactionData = FinancialTransactionData(),
     val fetchSelectedCategoriesForAllMonth: Map<Int, PieChartInfo> = emptyMap(),
-    val monthlyLineGraphData:  List<FiveDayAverageValues> = emptyList()
+    val monthlyLineGraphData:  List<DayAverageValues> = emptyList()
 )

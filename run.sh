@@ -1,30 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+AVD_NAME="Pixel_API_34"
+PACKAGE_NAME="com.example.financialspendingdashboardanalysis"
+
 cleanup() {
     echo "Stopping emulator..."
-    adb emu kill || true
+    adb emu kill >/dev/null 2>&1 || true
 }
 
 trap cleanup EXIT
 
-echo "Starting adb..."
+echo "======================================"
+echo " Financial Dashboard"
+echo "======================================"
+
+echo "Starting ADB..."
 adb start-server
 
-echo "Starting emulator..."
+echo "Checking emulator..."
 
-if ! emulator -list-avds | grep -q Pixel_API_34; then
-    echo "Missing Pixel_API_34 emulator"
+if ! emulator -list-avds | grep -Fxq "$AVD_NAME"; then
+    echo "Missing $AVD_NAME emulator"
     exit 1
 fi
 
+echo "Starting emulator..."
+
 emulator \
-    -avd Pixel_API_34 \
+    -avd "$AVD_NAME" \
     -no-window \
     -no-audio \
     -no-boot-anim \
     -no-snapshot \
-    -no-cache \
     -gpu swiftshader_indirect &
 
 echo "Waiting for Android boot..."
@@ -34,8 +42,7 @@ elapsed=0
 
 adb wait-for-device
 
-until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ];
-do
+until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; do
     sleep 5
     elapsed=$((elapsed + 5))
 
@@ -43,36 +50,53 @@ do
         echo "Emulator failed to boot"
         exit 1
     fi
+
+    echo "Still waiting... ${elapsed}s"
 done
 
-until [ "$(adb shell getprop init.svc.bootanim | tr -d '\r')" = "stopped" ];
-do
+echo "Android boot completed."
+
+until [ "$(adb shell getprop init.svc.bootanim 2>/dev/null | tr -d '\r')" = "stopped" ]; do
     sleep 2
 done
 
 echo "Waiting for package manager..."
 
-until adb shell pm list packages >/dev/null 2>&1;
-do
+until adb shell pm list packages >/dev/null 2>&1; do
     sleep 2
 done
 
-adb shell input keyevent 82
+echo "Android is ready."
+
+adb shell input keyevent 82 || true
 
 echo "Building APK..."
 
 ./gradlew assembleDebug --no-daemon
 
-echo "Installing APK..."
+APK="app/build/outputs/apk/debug/app-debug.apk"
 
-APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+if [ ! -f "$APK" ]; then
+    echo "APK not found: $APK"
+    exit 1
+fi
+
+echo "Installing APK..."
 
 adb install -r "$APK"
 
 echo "Launching application..."
 
 adb shell monkey \
-    -p com.example.financialspendingdashboardanalysis \
+    -p "$PACKAGE_NAME" \
+    -c android.intent.category.LAUNCHER \
     1
 
-echo "Done"
+echo ""
+echo "======================================"
+echo " Financial Dashboard is running!"
+echo "======================================"
+echo ""
+
+# Keep container running while emulator is alive
+wait

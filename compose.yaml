@@ -1,0 +1,13 @@
+services:
+  financial-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: financial-dashboard:emulator
+    volumes:
+      - gradle-cache:/root/.gradle
+    stdin_open: true
+    tty: true
+
+volumes:
+  gradle-cache:

@@ -78,7 +78,6 @@ fun DisplayFinancialDashboardNavGraph() {
         // Dashboard analytics screen.
         composable<DisplayFinancialDashboardRoute> {
             FinancialSpendingDashBoard(
-                navController = navController,
                 financialAnalyticsDashboardViewModel = financialAnalyticsDashboardViewModel
             )
         }

@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.financialspendingdashboardanalysis.R
-import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
+import com.example.financialspendingdashboardanalysis.model.DayAverageValues
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
@@ -31,7 +31,7 @@ import kotlin.math.roundToInt
 /**
  * Displays a multi-line financial chart representing monthly spending trends for a selected category.
  *
- * This graph visualizes how transaction amounts (averaged over five-day intervals) progress
+ * This graph visualizes how transaction amounts (day average intervals) progress
  * throughout a specific month. It helps users identify spending patterns or spikes over time.
  *
  * ### Visual Elements:
@@ -46,12 +46,12 @@ import kotlin.math.roundToInt
  * control. Values are normalized relative to the maximum value in the dataset to ensure they fit
  * perfectly within the vertical bounds of the canvas.
  *
- * @param monthlyLineGraphData A list of [FiveDayAverageValues] containing the time-series data to plot.
+ * @param monthlyLineGraphData A list of [DayAverageValues] containing the time-series data to plot.
  * @param selectedBarColor The color used for the connecting line, typically matching the category's theme color.
  */
 @Composable
 fun DisplayAllMonthlyLineGraphs(
-    monthlyLineGraphData: List<FiveDayAverageValues>,
+    monthlyLineGraphData: List<DayAverageValues>,
     selectedBarColor: Color = Color.Transparent
 ) {
     if (monthlyLineGraphData.isEmpty()) return
@@ -209,36 +209,4 @@ fun DisplayAllMonthlyLineGraphs(
             )
         )
     }
-}
-
-/**
- * Calculates a "clean" maximum value for a chart axis based on a raw input value.
- *
- * This function uses a "nice numbers" algorithm to find an upper bound that is a multiple
- * of a power of ten, making the axis labels easier for users to read (e.g., rounding up
- * a max value of 8,500 to 10,000 or 4,200 to 5,000).
- *
- * @param value The raw maximum value found in the dataset.
- * @return A rounded-up "nice" value suitable for use as an axis maximum.
- */
-fun calculateAxisMax(value: Float): Float {
-    if (value <= 0f) return 1f
-
-    // Find the order of magnitude
-    val magnitude = 10.0.pow(
-        floor(log10(value.toDouble()))
-    )
-
-    // Normalize the value into a range between 1 and 10
-    val normalized = value / magnitude.toFloat()
-
-    // Choose a clean axis step
-    val niceNormalized = when {
-        normalized <= 1f -> 1f
-        normalized <= 2f -> 2f
-        normalized <= 5f -> 5f
-        else -> 10f
-    }
-
-    return (niceNormalized * magnitude).toFloat()
 }

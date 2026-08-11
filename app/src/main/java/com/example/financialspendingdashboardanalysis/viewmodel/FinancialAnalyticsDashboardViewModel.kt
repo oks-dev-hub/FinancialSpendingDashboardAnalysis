@@ -11,27 +11,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardAction
-import com.example.financialspendingdashboardanalysis.model.FinancialDashboardEvents
 import com.example.financialspendingdashboardanalysis.model.FinancialDashboardStates
-import com.example.financialspendingdashboardanalysis.model.FinancialTransactionData
 import com.example.financialspendingdashboardanalysis.model.PieChartInfo
 import com.example.financialmodels.TransactionCategory
-import com.example.financialspendingdashboardanalysis.model.FiveDayAverageValues
+import com.example.financialspendingdashboardanalysis.model.DayAverageValues
 import com.example.financialspendingdashboardanalysis.model.YearlyMonths
-import com.example.financialspendingdashboardanalysis.room.FinancialTransactionDatabaseProvider
-import com.example.financialspendingdashboardanalysis.room.FinancialTransactionsDao
-import com.example.financialspendingdashboardanalysis.room.FinancialTransactionsDatabase
 import com.example.financialspendingdashboardanalysis.ui.theme.FinancialTransactionApplication
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 import kotlin.collections.set
 import kotlin.random.Random
@@ -56,17 +48,17 @@ class FinancialAnalyticsDashboardViewModel(
     /**
      * Internal cache mapping month indices to their respective list of [PieChartInfo].
      */
-    val globalPieChartInfoMap: MutableMap<Int, List<PieChartInfo>> = mutableMapOf()
+    private val globalPieChartInfoMap: MutableMap<Int, List<PieChartInfo>> = mutableMapOf()
 
     /**
      * Aggregated pie chart data for the currently selected month, indexed by category.
      */
-    var monthlyPieChartData: MutableMap<TransactionCategory, PieChartInfo> = mutableMapOf()
+    private var monthlyPieChartData: MutableMap<TransactionCategory, PieChartInfo> = mutableMapOf()
 
     /**
      * Aggregated bar graph data representing trends for a specific category across months.
      */
-    var monthlyBarGraphData: MutableMap<Int, PieChartInfo> = mutableMapOf()
+    private var monthlyBarGraphData: MutableMap<Int, PieChartInfo> = mutableMapOf()
 
     /**
      * The total number of transactions processed for the current context.
@@ -76,52 +68,42 @@ class FinancialAnalyticsDashboardViewModel(
     /**
      * The name of the current calendar month.
      */
-    var currentMonth: String = ""
+    private var currentMonth: String = ""
 
     /**
      * The name of the month currently selected in the UI.
      */
-    var selectedMonth: String = ""
-
-    /**
-     * The index of the selected month relative to the data set.
-     */
-    var selectedMonthIndex: Int = 0
+     private var selectedMonth: String = ""
 
     /**
      * The currently selected transaction category across the entire dashboard.
      */
-    var globalSelectedCategory: TransactionCategory = TransactionCategory.UNKNOWN
+    private var globalSelectedCategory: TransactionCategory = TransactionCategory.UNKNOWN
 
     /**
      * A list of all months in a year.
      */
-    val months: List<YearlyMonths> = YearlyMonths.entries
+    private val months: List<YearlyMonths> = YearlyMonths.entries
 
     /**
-     * A list of the last six month names, ending with the current month.
+     * A list of the last six-month names, ending with the current month.
      */
     var lastSixMonthsFromCurrentMonth: List<String> = emptyList()
 
     /**
      * A list of generated colors for chart segments.
      */
-    val generateRandomColors: MutableList<Color> = mutableListOf()
-
-    /**
-     * Data object for the currently selected single transaction.
-     */
-    var selectedFinancialTransactionData: FinancialTransactionData = FinancialTransactionData()
+    private val generateRandomColors: MutableList<Color> = mutableListOf()
 
     /**
      * Raw list of pie chart data entities fetched from the repository.
      */
-    var fetchedFinancialTransactionsEntity: List<PieChartInfo> = emptyList()
+    private var fetchedFinancialTransactionsEntity: List<PieChartInfo> = emptyList()
 
     /**
      * List of five-day average values for line graph visualization.
      */
-    var fetchedAverageMonthlySummation: List<FiveDayAverageValues> = emptyList()
+    private var fetchedAverageMonthlySummation: List<DayAverageValues> = emptyList()
 
     private val _uiState = MutableStateFlow(FinancialDashboardStates())
 
@@ -130,15 +112,13 @@ class FinancialAnalyticsDashboardViewModel(
      */
     val uiState = _uiState.asStateFlow()
 
-    private val _sharedEvents = Channel<FinancialDashboardEvents>(Channel.BUFFERED)
-
     init {
         currentMonth = SimpleDateFormat(
             "MMMM",
             Locale.getDefault()
         ).format(Calendar.getInstance().time).trim()
 
-        lastSixMonthsFromCurrentMonth = getPreviousValues(count = 6).reversed()
+        lastSixMonthsFromCurrentMonth = getPreviousValues().reversed()
     }
 
     companion object {
@@ -193,17 +173,13 @@ class FinancialAnalyticsDashboardViewModel(
                             hasDashBoardBeenInitializedBefore = true,
                             selectedBarGraphIndex = action.pageIndex,
                             selectedBarGraphMonth = lastSixMonthsFromCurrentMonth[action.pageIndex],
-                            maxAmountForSelectedCategory = getMaxAmountForSelectedCategory(
-                                transactionCategory,
-                                action.pageIndex
-                            ),
                             fetchSelectedCategoriesForAllMonth = fetchSelectedCategoriesForAllMonth(
                                 transactionCategory
                             )
                         )
                     }
 
-                    populateFiveDayAMountAverageMonthly(
+                    populateDayAmountAverageMonthly(
                         month = action.pageIndex,
                         selectedTransactionCategory = transactionCategory
                     )
@@ -221,14 +197,10 @@ class FinancialAnalyticsDashboardViewModel(
                         fetchSelectedCategoriesForAllMonth = buildMap {
                             putAll(fetchSelectedCategoriesForAllMonth(action.selectedCategory))
                         },
-                        maxAmountForSelectedCategory = getMaxAmountForSelectedCategory(
-                            globalSelectedCategory,
-                            selectedMonthIndex
-                        ),
                     )
                 }
 
-                populateFiveDayAMountAverageMonthly(
+                populateDayAmountAverageMonthly(
                     month = lastSixMonthsFromCurrentMonth.indexOf(selectedMonth),
                     selectedTransactionCategory = globalSelectedCategory
                 )
@@ -249,7 +221,7 @@ class FinancialAnalyticsDashboardViewModel(
                         )
                     }
 
-                    populateFiveDayAMountAverageMonthly(
+                    populateDayAmountAverageMonthly(
                         month = action.selectedBarGraphIndex,
                         selectedTransactionCategory = globalSelectedCategory
                     )
@@ -259,38 +231,12 @@ class FinancialAnalyticsDashboardViewModel(
     }
 
     /**
-     * Fetches the maximum transaction amount for a specific category and month.
-     * Used for scaling charts and graphs.
-     *
-     * @param selectedTransactionCategory The category to inspect.
-     * @param enquiryMonth The month index to search in.
-     * @return The highest transaction value (in cents) found.
-     */
-    fun getMaxAmountForSelectedCategory(
-        selectedTransactionCategory: TransactionCategory,
-        enquiryMonth: Int
-    ): Long {
-        var maxAmount = 0L
-
-        globalPieChartInfoMap[enquiryMonth]?.forEach { (monthlyFinancialData, financialTransactionData) ->
-            val convertValueToTransactionCategory = convertValueToTransactionCategory(monthlyFinancialData)
-            if (convertValueToTransactionCategory == selectedTransactionCategory) {
-                if (financialTransactionData > maxAmount) {
-                    maxAmount = financialTransactionData
-                }
-            }
-        }
-
-        return maxAmount
-    }
-
-    /**
      * Converts a string value to its corresponding [TransactionCategory] enum.
      *
      * @param transactionCategory The string representation of the category.
      * @return The matching [TransactionCategory] or [TransactionCategory.UNKNOWN].
      */
-    fun convertValueToTransactionCategory(transactionCategory: String): TransactionCategory {
+    private fun convertValueToTransactionCategory(transactionCategory: String): TransactionCategory {
         return TransactionCategory.entries.find { it.value == transactionCategory } ?: TransactionCategory.UNKNOWN
     }
 
@@ -351,6 +297,7 @@ class FinancialAnalyticsDashboardViewModel(
         onUpdateRecomposition: (MutableMap<TransactionCategory, PieChartInfo>) -> Unit
     ) {
         viewModelScope.launch(Dispatchers.IO) {
+            totalTransactionsCount = 0
             fetchedFinancialTransactionsEntity =
                 financialTransactionRepository.getFinancialTransactionsInformationByDate(
                     enquiryMonth = enquiredMonth,
@@ -361,6 +308,7 @@ class FinancialAnalyticsDashboardViewModel(
                 pieChartInfo = fetchedFinancialTransactionsEntity
             )
 
+            Log.i("Okuhle", "fetchedFinancialTransactionsEntity $enquiredMonth $fetchedFinancialTransactionsEntity")
             fetchedFinancialTransactionsEntity.forEach { globalPieChartInfo ->
                 totalTransactionsCount += globalPieChartInfo.totalTransactionsCount
                 val convertValueToTransactionCategory = convertValueToTransactionCategory(globalPieChartInfo.selectedTransactionCategory)
@@ -390,12 +338,12 @@ class FinancialAnalyticsDashboardViewModel(
      * @param count The number of previous months to retrieve.
      * @return A list of month names in reverse chronological order.
      */
-    fun getPreviousValues(count: Int): List<String> {
+    private fun getPreviousValues(): List<String> {
         val currentIndex = YearlyMonths.entries.indexOfFirst {
             it.month.equals(currentMonth, ignoreCase = true)
         }
 
-        return (1..count).map { offset ->
+        return (1..6).map { offset ->
             val index = (currentIndex - offset + months.size) % months.size
             months[index].month
         }
@@ -407,7 +355,7 @@ class FinancialAnalyticsDashboardViewModel(
      * @param month The month index.
      * @param pieChartInfo The data to cache.
      */
-    fun populateMonthlyDataForEachFinancialCategory(
+    private fun populateMonthlyDataForEachFinancialCategory(
         month: Int,
         pieChartInfo: List<PieChartInfo>
     ) {
@@ -421,36 +369,22 @@ class FinancialAnalyticsDashboardViewModel(
      * @param month The month index.
      * @param selectedTransactionCategory The category to analyze.
      */
-    fun populateFiveDayAMountAverageMonthly(
+    private fun populateDayAmountAverageMonthly(
         month: Int,
         selectedTransactionCategory: TransactionCategory
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            fetchedAverageMonthlySummation = financialTransactionRepository.getAverageAmountPerFiveDayInterval(
+            fetchedAverageMonthlySummation = financialTransactionRepository.getAverageAmountPerDay(
                 year = 2026,
                 month = month + 1,
                 transactionCategory = selectedTransactionCategory.value
             )
 
-            Log.i("Okuhle", "did we get to this state $month ${selectedTransactionCategory.value} $fetchedAverageMonthlySummation")
             _uiState.update { currentState ->
                 currentState.copy(
                     monthlyLineGraphData = fetchedAverageMonthlySummation
                 )
             }
         }
-    }
-
-    /**
-     * Formats a Unix timestamp into a readable date string.
-     *
-     * @param timestamp The timestamp in milliseconds.
-     * @return A formatted string (e.g., "12 October 2025").
-     */
-    fun formatTimestamp(timestamp: Long): String {
-        return SimpleDateFormat(
-            "dd MMMM yyyy",
-            Locale.getDefault()
-        ).format(Date(timestamp))
     }
 }

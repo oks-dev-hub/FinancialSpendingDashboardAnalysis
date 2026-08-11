@@ -8,6 +8,32 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     python3 \
     usbutils \
+    libx11-6 \
+    libx11-xcb1 \
+    libxext6 \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxcb1 \
+    libxcb-cursor0 \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-render-util0 \
+    libxcb-shape0 \
+    libxcb-xinerama0 \
+    libxcb-xkb1 \
+    libxkbcommon0 \
+    libxkbcommon-x11-0 \
+    libnss3 \
+    libglu1-mesa \
+    libpulse0 \
+    libasound2 \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV ANDROID_SDK_ROOT=/opt/android-sdk
@@ -58,7 +84,8 @@ RUN --mount=type=cache,target=/root/.gradle \
 
 COPY . .
 
-RUN chmod +x gradlew
+RUN sed -i 's/\r$//' gradlew run.sh \
+    && chmod +x gradlew run.sh
 
 RUN echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
 
